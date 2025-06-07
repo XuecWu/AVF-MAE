@@ -26,7 +26,7 @@ class Mlp(nn.Module):
         hidden_features = hidden_features or in_features
 
         self.fc1        = nn.Linear(in_features, hidden_features)
-        self.act        = act_layer() # 此处进行初始化运用
+        self.act        = act_layer()
         self.fc2        = nn.Linear(hidden_features, out_features)
 
         self.drop       = nn.Dropout(drop)
@@ -50,9 +50,9 @@ class Attention(nn.Module):
             head_dim   = attn_head_dim
 
         all_head_dim   = head_dim * self.num_heads
-        self.scale     = qk_scale or head_dim ** -0.5 # 公式中定义的缩放因子
+        self.scale     = qk_scale or head_dim ** -0.5
 
-        self.qkv       = nn.Linear(dim, all_head_dim * 3, bias=False) # 存在weight, 但是不存在bias
+        self.qkv       = nn.Linear(dim, all_head_dim * 3, bias=False)
 
         if qkv_bias:
             self.q_bias = nn.Parameter(torch.zeros(all_head_dim))
@@ -67,7 +67,7 @@ class Attention(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
 
 
-    def forward(self, x, mask=None): # NOTE: 注意这里要mask
+    def forward(self, x, mask=None):
         B, N, C  = x.shape
         qkv_bias = None
 
@@ -81,8 +81,8 @@ class Attention(nn.Module):
 
         q, k, v = qkv[0], qkv[1], qkv[2]   # make torchscript happy (cannot use tensor as tuple)
 
-        q       = q * self.scale # 完成公式中Q与缩放因子的作用
-        attn    = (q @ k.transpose(-2, -1)) # 完成公式表达中softmax内部的操作
+        q       = q * self.scale
+        attn    = (q @ k.transpose(-2, -1))
         
         #---------------------------#
         # me: support window mask
@@ -91,15 +91,15 @@ class Attention(nn.Module):
             nW   = mask.shape[0]
             attn = attn.view(B // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, N, N)
-            attn = attn.softmax(dim=-1) # 过softmax得到输出
+            attn = attn.softmax(dim=-1)
         else:
-            attn = attn.softmax(dim=-1) # 过softmax得到输出
+            attn = attn.softmax(dim=-1)
 
-        attn     = self.attn_drop(attn) # 完成Att计算后, 过下dropout
+        attn     = self.attn_drop(attn)
 
-        x        = (attn @ v).transpose(1, 2).reshape(B, N, -1) # 完成softmax部分和V部分的共同作用 
+        x        = (attn @ v).transpose(1, 2).reshape(B, N, -1)
 
-        x        = self.proj(x) # 通道数调整
+        x        = self.proj(x)
         x        = self.proj_drop(x)
 
         return x
@@ -146,7 +146,7 @@ class GeneralAttention(nn.Module):
         q        = F.linear(input=x, weight=self.q.weight, bias=q_bias)
         q        = q.reshape(B, T1, self.num_heads, -1).transpose(1, 2) # me: (B, H, T1, C//H)
 
-        kv       = F.linear(input=x if context is None else context, weight=self.kv.weight, bias=kv_bias) # 这里实现对于context的使用, 如果是自注意力则context为None, 如果是跨模态注意力则context非None
+        kv       = F.linear(input=x if context is None else context, weight=self.kv.weight, bias=kv_bias)
 
         _, T2, _ = kv.shape
         kv       = kv.reshape(B, T2, 2, self.num_heads, -1).permute(2, 0, 3, 1, 4)
@@ -159,11 +159,8 @@ class GeneralAttention(nn.Module):
         attn     = attn.softmax(dim=-1)
         attn     = self.attn_drop(attn)
 
-        x        = (attn @ v).transpose(1, 2).reshape(B, T1, -1) # (B, H, T1, C//H) -> (B, T1, H, C//H) -> (B, T1, C) # 完成attention的计算
+        x        = (attn @ v).transpose(1, 2).reshape(B, T1, -1) # (B, H, T1, C//H) -> (B, T1, H, C//H) -> (B, T1, C)
 
-        #----------------------------#
-        # 通过映射层进行维度数的调整
-        #----------------------------#
         x        = self.proj(x)
         x        = self.proj_drop(x)
 
@@ -196,11 +193,10 @@ class IterativeRefinement(nn.Module):
         )
 
 
-    def forward(self, x_a: torch.Tensor, x_v: torch.Tensor, x: torch.Tensor): # x_a, x_v的shape均为[B, N, C] x的shape为[B, N, 2C] (只有第一次为2C)
+    def forward(self, x_a: torch.Tensor, x_v: torch.Tensor, x: torch.Tensor):
         _, _, C = x.shape
 
-
-        if self.concat_dim == C: # 均为1024
+        if self.concat_dim == C:
             x = self.post_extract_proj(x) # [B, N, 2C] -> [B, N, C]
 
 
@@ -221,7 +217,7 @@ class IterativeRefinement(nn.Module):
 
         x = self.layer_norm(x)
 
-        return x # 经过强化的原始张量
+        return x
 
 
 class CSBlock_new_no_Mask(nn.Module):
@@ -233,14 +229,14 @@ class CSBlock_new_no_Mask(nn.Module):
 
 
         self.cross_attn    = GeneralAttention(dim=dim, context_dim=context_dim, num_heads=num_cross_heads, qkv_bias=qkv_bias, 
-                                           qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop, attn_head_dim=cross_attn_head_dim) # 跨注意力
+                                           qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop, attn_head_dim=cross_attn_head_dim)
         
         self.cross_norm1   = norm_layer(dim)         # Q  related
         self.cross_norm2   = norm_layer(context_dim) # KV related
 
         # for audio
         self.cross_attn_a  = GeneralAttention(dim=dim, context_dim=context_dim, num_heads=num_cross_heads, qkv_bias=qkv_bias, 
-                                           qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop, attn_head_dim=cross_attn_head_dim) # 跨注意力
+                                           qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop, attn_head_dim=cross_attn_head_dim)
         
         self.cross_norm1_a = norm_layer(dim)         # Q  related
         self.cross_norm2_a = norm_layer(context_dim) # KV related
@@ -248,12 +244,12 @@ class CSBlock_new_no_Mask(nn.Module):
 
         self.norm1     = norm_layer(dim)
         self.attn      = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, 
-                                    proj_drop=drop, attn_head_dim=attn_head_dim) # 自注意力
+                                    proj_drop=drop, attn_head_dim=attn_head_dim)
 
 
         self.norm_new  = norm_layer(dim)
         self.attn_new  = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, 
-                                    proj_drop=drop, attn_head_dim=attn_head_dim) # 自注意力
+                                    proj_drop=drop, attn_head_dim=attn_head_dim)
         
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
@@ -295,21 +291,18 @@ class CSBlock_new_no_Mask(nn.Module):
     def forward(self, video, audio):
         if self.gamma_1 is None: # NOTE: by default
 
-            #------------------------#
-            # 视频和音频的自注意力层
-            #------------------------#
-            video_sa = video + self.drop_path(self.attn(self.norm1(video)))        # 视频自注意力
-            audio_sa = audio + self.drop_path(self.attn_new(self.norm_new(audio))) # 音频自注意力
+            video_sa = video + self.drop_path(self.attn(self.norm1(video)))
+            audio_sa = audio + self.drop_path(self.attn_new(self.norm_new(audio)))
 
-            v_sa     = video_sa + self.drop_path(self.mlp_vsa(self.norm_vsa(video_sa))) # 视频自注意力前向传播层
-            a_sa     = audio_sa + self.drop_path(self.mlp_asa(self.norm_asa(audio_sa))) # 音频自注意力前向传播层
+            v_sa     = video_sa + self.drop_path(self.mlp_vsa(self.norm_vsa(video_sa)))
+            a_sa     = audio_sa + self.drop_path(self.mlp_asa(self.norm_asa(audio_sa)))
 
 
-            v_cma    = video + self.drop_path(self.cross_attn(self.cross_norm1(video), context=self.cross_norm2(audio)))       # 视频跨注意力
-            a_cma    = audio + self.drop_path(self.cross_attn_a(self.cross_norm1_a(audio), context=self.cross_norm2_a(video))) # 音频跨注意力
+            v_cma    = video + self.drop_path(self.cross_attn(self.cross_norm1(video), context=self.cross_norm2(audio)))
+            a_cma    = audio + self.drop_path(self.cross_attn_a(self.cross_norm1_a(audio), context=self.cross_norm2_a(video)))
 
-            v_cma    = v_cma + self.drop_path(self.mlp_vcma(self.norm_vcma(v_cma))) # 视频跨注意力前向传播层
-            a_cma    = a_cma + self.drop_path(self.mlp_acma(self.norm_acma(a_cma))) # 音频跨注意力前向传播层
+            v_cma    = v_cma + self.drop_path(self.mlp_vcma(self.norm_vcma(v_cma)))
+            a_cma    = a_cma + self.drop_path(self.mlp_acma(self.norm_acma(a_cma)))
 
 
             v_sq  = torch.cat((v_sa, v_cma), -1)
@@ -337,7 +330,7 @@ class VisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
                  drop_path_rate=0., norm_layer=nn.LayerNorm, init_values=None,):
         super().__init__()
 
-        dpr         = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule # 为下面的融合模块去服务 # dpr中的每个元素为0到drop_path_rate的等间隔值
+        dpr         = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
 
 
         self.blocks = nn.ModuleList([
@@ -362,8 +355,8 @@ class VisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
         self.cross_norm_2     = norm_layer(embed_dim)
         self.cross_norm_3     = norm_layer(embed_dim_audio)
 
-        self.norm       = norm_layer(embed_dim) # 视频norm层
-        self.norm_audio = norm_layer(embed_dim_audio) # do not share norm layer # 音频norm层
+        self.norm       = norm_layer(embed_dim)
+        self.norm_audio = norm_layer(embed_dim_audio) # do not share norm layer
 
 
         self.vadaptiveinteraction  = Attention(embed_dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop_rate, proj_drop=drop_rate, attn_head_dim=None)
@@ -378,17 +371,17 @@ class VisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
 
         # video
         self.norm_att_v       = norm_layer(embed_dim)
-        self.mlp_att_v        = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)             # act_layer不需要加()
+        self.mlp_att_v        = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)
 
         # audio
         self.norm_att_a       = norm_layer(embed_dim_audio)
-        self.mlp_att_a        = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate) # act_layer不需要加()
+        self.mlp_att_a        = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate)
 
         self.norm_att_v_IR    = norm_layer(embed_dim)
         self.norm_att_a_IR    = norm_layer(embed_dim_audio)
 
-        self.mlp_att_video_IR = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)             # act_layer不需要加()
-        self.mlp_att_audio_IR = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate) # act_layer不需要加()
+        self.mlp_att_video_IR = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)
+        self.mlp_att_audio_IR = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate)
 
 
         drop_path_rate_1      = drop_path_rate * 0.5
@@ -397,7 +390,7 @@ class VisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
         self.drop_path        = DropPath(drop_path_rate_1) if drop_path_rate_1 > 0. else nn.Identity()
 
 
-        self.apply(self._init_weights) # 应用初始化参数
+        self.apply(self._init_weights)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
@@ -478,7 +471,7 @@ class VisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
         v_out   = v_out + self.drop_path(self.mlp_att_video_IR(self.norm_att_v_IR(v_out))) # FFN # [B, N, C]
         a_out   = a_out + self.drop_path(self.mlp_att_audio_IR(self.norm_att_a_IR(a_out))) # FFN # [B, N, C]
 
-        return v_out, a_out, x_overall # 三个张量的shape均为[B, N, C]=[B, 8, 512] 相当于均为一致的 [2024.7.17 16.29]
+        return v_out, a_out, x_overall
 
 
 class PretrainVisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
@@ -514,12 +507,12 @@ class PretrainVisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
 
 
         self.cross_attn       = GeneralAttention(dim=embed_dim, context_dim=embed_dim, num_heads=num_heads, qkv_bias=qkv_bias, 
-                                           qk_scale=qk_scale, attn_drop=attn_drop_rate, proj_drop=drop_rate, attn_head_dim=None) # 跨注意力
+                                           qk_scale=qk_scale, attn_drop=attn_drop_rate, proj_drop=drop_rate, attn_head_dim=None)
 
 
-        self.cross_norm_1     = norm_layer(embed_dim)       # 面向视频张量
-        self.cross_norm_2     = norm_layer(embed_dim)       # 面向原始张量, shape为[20, 1, 512]
-        self.cross_norm_3     = norm_layer(embed_dim_audio) # 面向音频张量
+        self.cross_norm_1     = norm_layer(embed_dim)
+        self.cross_norm_2     = norm_layer(embed_dim)
+        self.cross_norm_3     = norm_layer(embed_dim_audio)
 
 
         self.vadaptiveinteraction  = Attention(embed_dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop_rate, proj_drop=drop_rate, attn_head_dim=None)
@@ -534,18 +527,18 @@ class PretrainVisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
 
         # video
         self.norm_att_v       = norm_layer(embed_dim)
-        self.mlp_att_v        = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)             # act_layer不需要加()
+        self.mlp_att_v        = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)
 
         # audio
         self.norm_att_a       = norm_layer(embed_dim_audio)
-        self.mlp_att_a        = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate) # act_layer不需要加()
+        self.mlp_att_a        = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate)
 
 
         self.norm_att_v_IR    = norm_layer(embed_dim)
         self.norm_att_a_IR    = norm_layer(embed_dim_audio)
 
-        self.mlp_att_video_IR = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)             # act_layer不需要加()
-        self.mlp_att_audio_IR = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate) # act_layer不需要加()
+        self.mlp_att_video_IR = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)
+        self.mlp_att_audio_IR = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate)
 
 
         drop_path_rate_1      = drop_path_rate * 0.5

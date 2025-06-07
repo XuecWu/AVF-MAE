@@ -128,7 +128,7 @@ def get_args():
     parser.add_argument('--finetune', default='', help='finetune from checkpoint')
     parser.add_argument('--model_key', default='model|module', type=str)
 
-    parser.add_argument('--model_prefix', default='', type=str) # NOTE: 这个参数是给微调模型参数前面加前缀的, 因此不需要修改
+    parser.add_argument('--model_prefix', default='', type=str)
 
     parser.add_argument('--init_scale', default=0.001, type=float)
 
@@ -151,7 +151,7 @@ def get_args():
 
     parser.add_argument('--data_set', default='Kinetics-400', choices=['Kinetics-400', 'SSV2', 'UCF101', 'HMDB51','image_folder',
                         'DFEW', 'MAFW', 'RAVDESS', 'CREMA-D', 'AVCAFFE', "MER2023", "MSP-IMPROV", "IEMOCAP", "MER24-LABELED"],
-                        type=str, help='dataset') # 微调数据集
+                        type=str, help='dataset')
     
     parser.add_argument('--output_dir', default='',
                         help='path where to save, empty for no saving')
@@ -189,7 +189,7 @@ def get_args():
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
-    parser.add_argument('--local_rank', default=-1, type=int) # local_rank -> local-rank # NOTE: PyTorch版本问题 # NOTE: 针对老版本,已经复原 [2024.7.7 15.45] # NOTE: 已换成2.0版本 [2024.8.30 18.45] 换回原来的 [2024.8.31 8.52]
+    parser.add_argument('--local_rank', default=-1, type=int) # local_rank -> local-rank
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
@@ -217,7 +217,7 @@ def get_args():
     parser.add_argument('--save_feature', action='store_true', default=False)
 
 
-    parser.add_argument('--attn_type', default='local_global', choices=['joint', 'local_global'], type=str, help='attention type for spatiotemporal modeling') # 默认为local_global # 已有的
+    parser.add_argument('--attn_type', default='local_global', choices=['joint', 'local_global'], type=str, help='attention type for spatiotemporal modeling')
 
     parser.add_argument('--lg_region_size', type=int, nargs='+', default=(2,5,10), help='region size (t,h,w) for local_global attention') # for video, (2, 5, 10)
     parser.add_argument('--lg_region_size_audio', type=int, nargs='+', default=(4,4), help='region size (h,w) for local_global attention') # for audio, (4, 4)
@@ -228,7 +228,7 @@ def get_args():
     parser.add_argument('--lg_attn_param_sharing_first_third', action='store_true', help='share parameters of the first and the third attention layers for local_global attention')
     parser.add_argument('--lg_attn_param_sharing_all', action='store_true', help='share all the parameters of three attention layers for local_global attention')
 
-    parser.add_argument('--lg_classify_token_type', type=str, default='region', choices=['org', 'region', 'all'], help='the token type in final classification for local_global attention') # 直接修改默认为region
+    parser.add_argument('--lg_classify_token_type', type=str, default='region', choices=['org', 'region', 'all'], help='the token type in final classification for local_global attention')
 
     parser.add_argument('--lg_no_second', action='store_true', help='no second (inter-region) attention for local_global attention')
     parser.add_argument('--lg_no_third', action='store_true', help='no third (local-global interaction) attention for local_global attention')
@@ -515,9 +515,6 @@ def main(args, ds_init):
 
     model.to(device)
 
-    #--------------------#
-    # NOTE: 默认不使用
-    #--------------------#
     model_ema = None
     if args.model_ema:
         model_ema = ModelEma(

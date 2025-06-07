@@ -157,26 +157,26 @@ def get_args():
     parser.add_argument('--use_frame_diff_as_target', action='store_true', help="use frame difference as partial recontruction targets")
     parser.add_argument('--frame_diff_group_size', default=2, type=int, help="the group size for diff calculation, for example, "
                         "the target is [f0, f1-f0, f2-f0, f3-f0], [f4, f5-f4, f6-f4, f7-f4], ..., when the size is 4.")
-    parser.add_argument('--target_diff_weight', default=None, type=float, help="the weight (0-1) for frame diff target ") # NOTE: 默认为None
+    parser.add_argument('--target_diff_weight', default=None, type=float, help="the weight (0-1) for frame diff target ")
 
-    parser.add_argument('--attn_type', default='local_global', choices=['joint', 'local_global'], type=str, help='attention type for spatiotemporal modeling') # 默认为local_global
+    parser.add_argument('--attn_type', default='local_global', choices=['joint', 'local_global'], type=str, help='attention type for spatiotemporal modeling')
 
     parser.add_argument('--lg_region_size', type=int, nargs='+', default=(2,5,10), help='region size (t,h,w) for local_global attention') # for video, (2, 5, 10)
     parser.add_argument('--lg_region_size_audio', type=int, nargs='+', default=(4,4), help='region size (h,w) for local_global attention') # for audio, (4, 4)
 
-    parser.add_argument('--lg_first_attn_type', type=str, default='self', choices=['cross', 'self'], help='the first attention layer type for local_global attention') # 默认self
-    parser.add_argument('--lg_third_attn_type', type=str, default='cross', choices=['cross', 'self'], help='the third attention layer type for local_global attention') # 默认cross
+    parser.add_argument('--lg_first_attn_type', type=str, default='self', choices=['cross', 'self'], help='the first attention layer type for local_global attention')
+    parser.add_argument('--lg_third_attn_type', type=str, default='cross', choices=['cross', 'self'], help='the third attention layer type for local_global attention')
 
-    parser.add_argument('--lg_attn_param_sharing_first_third', action='store_true', help='share parameters of the first and the third attention layers for local_global attention') # 不指定
-    parser.add_argument('--lg_attn_param_sharing_all', action='store_true', help='share all the parameters of three attention layers for local_global attention') # 不指定
+    parser.add_argument('--lg_attn_param_sharing_first_third', action='store_true', help='share parameters of the first and the third attention layers for local_global attention')
+    parser.add_argument('--lg_attn_param_sharing_all', action='store_true', help='share all the parameters of three attention layers for local_global attention')
 
-    parser.add_argument('--lg_no_second', action='store_true', help='no second (inter-region) attention for local_global attention') # 不指定
-    parser.add_argument('--lg_no_third', action='store_true', help='no third (local-global interaction) attention for local_global attention') # 不指定
+    parser.add_argument('--lg_no_second', action='store_true', help='no second (inter-region) attention for local_global attention')
+    parser.add_argument('--lg_no_third', action='store_true', help='no third (local-global interaction) attention for local_global attention')
 
-    parser.add_argument('--decoder_mask_type', default='run_cell', choices=['random', 'run_cell'], type=str, help='decoder masked strategy') # decoder的mask方式 For Video
+    parser.add_argument('--decoder_mask_type', default='run_cell', choices=['random', 'run_cell'], type=str, help='decoder masked strategy')
     parser.add_argument('--decoder_mask_ratio', default=0.5, type=float, help='mask ratio of decoder') # For Video
 
-    parser.add_argument('--decoder_mask_type_audio', default='random', choices=['random'], type=str, help='decoder masked strategy') # decoder的mask方式 For Audio
+    parser.add_argument('--decoder_mask_type_audio', default='random', choices=['random'], type=str, help='decoder masked strategy')
     parser.add_argument('--decoder_mask_ratio_audio', default=0.5, type=float, help='mask ratio of decoder') # For Audio
 
     return parser.parse_args()
@@ -223,7 +223,7 @@ def main(args):
 
     cudnn.benchmark = True
 
-    model      = get_model(args) # 得到模型
+    model      = get_model(args)
 
     patch_size        = model.encoder.patch_embed.patch_size
     print("Patch size (video) = %s" % str(patch_size))

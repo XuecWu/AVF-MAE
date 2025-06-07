@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class RandomMaskingGenerator2D:
     def __init__(self, input_size, mask_ratio):
         self.height, self.width = input_size

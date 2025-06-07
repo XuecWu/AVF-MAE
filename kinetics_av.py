@@ -549,7 +549,6 @@ class VideoClsDatasetFrame(Dataset):
 
         #-----------------------------------------#
         # avoid hanging issue
-        # 直接将这块注释掉即可, 帧不够的时候会进行pad
         #-----------------------------------------#
         #if os.path.getsize(fname) < 1 * 1024:
         #    print('SKIP: ', fname, " - ", os.path.getsize(fname))
@@ -832,9 +831,6 @@ def tensor_normalize(tensor, mean, std):
     return tensor
 
 
-#-------------------------------#
-# 预训练数据集使用
-#-------------------------------#
 class VideoMAE(torch.utils.data.Dataset):
     """Load your own video classification dataset.
     Parameters
@@ -891,8 +887,6 @@ class VideoMAE(torch.utils.data.Dataset):
     lazy_init : bool, default False.
         If set to True, build a dataset instance without loading any dataset.
 
-    NOTE: 还有一些面向音频的参数
-
     """
     def __init__(self,
                  root,
@@ -947,14 +941,10 @@ class VideoMAE(torch.utils.data.Dataset):
                 raise(RuntimeError("Found 0 video clips in subfolders of: " + root + "\n"
                                    "Check your data directory (opt.data-dir)."))
 
-        #-----------------------------------------------------------#
-        # 我们可以把所有的数据集都统一成224*224的且只包含人脸的形式
-        # 这样能减小很多的数据处理时间, 从而提速训练
-        #-----------------------------------------------------------#
         self.is_voxceleb2 = False
         self.crop_idxs    = None
 
-        if 'AAAAAA' in setting.lower(): # 关闭voxceleb2的再次crop策略 [2024.7.1 15.26]
+        if 'AAAAAA' in setting.lower():
             self.is_voxceleb2 = True
 
             if image_size == 192:
@@ -976,11 +966,7 @@ class VideoMAE(torch.utils.data.Dataset):
 
         self.audio_sample_rate    = audio_sample_rate
 
-        #-------------------------#
-        # 音频掩码生成器
-        # 包含encoder和decoder
-        #-------------------------#
-        self.mask_generator_audio  = mask_generator_audio # NOTE: 里面包含encoder和decoder mask策略, 需要进行实例化
+        self.mask_generator_audio  = mask_generator_audio
 
 
     def __getitem__(self, index):
@@ -999,7 +985,7 @@ class VideoMAE(torch.utils.data.Dataset):
                 video_name = '{}.{}'.format(directory, self.video_ext)
 
             try:
-                decord_vr = decord.VideoReader(video_name, num_threads=1) # 单线程, 避免数据混乱
+                decord_vr = decord.VideoReader(video_name, num_threads=1)
                 duration  = len(decord_vr)
 
             except Exception as e:
@@ -1008,18 +994,15 @@ class VideoMAE(torch.utils.data.Dataset):
                 return self.__getitem__(next_idx)
 
 
-        segment_indices, skip_offsets = self._sample_train_indices(duration) # 得到segment_indices以及skip_offsets
+        segment_indices, skip_offsets = self._sample_train_indices(duration)
 
-        images, (start_frame_idx, end_frame_idx) = self._video_TSN_decord_batch_loader(directory, decord_vr, duration, segment_indices, skip_offsets) # 得到加载的帧序列
+        images, (start_frame_idx, end_frame_idx) = self._video_TSN_decord_batch_loader(directory, decord_vr, duration, segment_indices, skip_offsets)
 
-        process_data, encoder_mask, decoder_mask = self.transform((images, None)) # T*C,H,W # 这里相当于运用的为视频掩码生成器
+        process_data, encoder_mask, decoder_mask = self.transform((images, None)) # T*C,H,W
         
-        # for repeated sampling # Wu: 主要就是乘上了self.num_segments, 但是还是默认为1, 因此无关紧要
-        process_data = process_data.view((self.num_segments * self.new_length, 3) + process_data.size()[-2:]).transpose(0,1)  # T*C,H,W -> T,C,H,W -> C,T,H,W 因此最后的形式为(C, T, H, W)
+        # for repeated sampling
+        process_data = process_data.view((self.num_segments * self.new_length, 3) + process_data.size()[-2:]).transpose(0,1)  # T*C,H,W -> T,C,H,W -> C,T,H,W
 
-        #-----------------#
-        # audio加载与处理
-        #-----------------#
         try:
             audio_data = self._audio_decord_batch_loader(video_name, decord_vr, start_frame_idx, end_frame_idx, use_torchaudio=True)
 
@@ -1033,9 +1016,9 @@ class VideoMAE(torch.utils.data.Dataset):
         encoder_mask_audio     = self.mask_generator_audio.encoder_mask_map_generator()
 
         # get decoder mask for audio [2024.7.3 18.46]
-        if self.mask_generator_audio.decoder_mask_map_generator: # NOTE: 存在时, 我们进行调用
+        if self.mask_generator_audio.decoder_mask_map_generator:
             
-            # print('we deploy the normal decoder_mask_map for audio') # NOTE: we deploy!! ok!!
+            # print('we deploy the normal decoder_mask_map for audio')
             decoder_mask_audio = self.mask_generator_audio.decoder_mask_map_generator()
         else:
             print('The decoder_mask_map_audio is not normal!!!')
@@ -1139,7 +1122,7 @@ class VideoMAE(torch.utils.data.Dataset):
             audio = audio_reader[audio_start_idx:audio_end_idx].asnumpy()
             
         else:# use torchaudio
-            audio_name = video_name.replace('videos', 'audio_16k') # 注意修改路径
+            audio_name = video_name.replace('videos', 'audio_16k')
             audio_name = audio_name.replace('.mp4', '.wav')
             audio_start_idx = int(audio_start * self.audio_sample_rate)
             audio_num_samples = int((audio_end - audio_start) * self.audio_sample_rate)

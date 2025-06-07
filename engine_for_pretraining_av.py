@@ -9,15 +9,9 @@ from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 def custom_mae_loss(outputs, labels, bool_masked_pos, decode_masked_pos, B):
 
-    #----------------------#
-    # 计算基本的均方误差损失
-    #----------------------#
     loss = (outputs - labels) ** 2
     loss = loss.mean(dim=-1)
     
-    #----------------------#
-    # 计算掩码位置的损失
-    #----------------------#
     cal_loss_mask = bool_masked_pos[~decode_masked_pos].reshape(B, -1)
     loss          = (loss * cal_loss_mask).sum() / cal_loss_mask.sum()
     
@@ -62,7 +56,7 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
         # NOTE: new added
         if it >= len(lr_schedule_values):
             print(f"=> Warning: 'it' value {it} exceeds 'lr_schedule_values' length {len(lr_schedule_values)}")
-            it = len(lr_schedule_values) - 1 # 调整it为最后一个有效索引
+            it = len(lr_schedule_values) - 1
 
         if lr_schedule_values is not None or wd_schedule_values is not None:
 
@@ -72,10 +66,8 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
 
                 if wd_schedule_values is not None and param_group["weight_decay"] > 0:
                     param_group["weight_decay"] = wd_schedule_values[it]
-
-        # videos, bool_masked_pos, audios, bool_masked_pos_audio = batch [2024.7.3 15.45]
                     
-        videos, bool_masked_pos, decode_masked_pos, audios, bool_masked_pos_audio, decode_masked_pos_audio   = batch # NOTE: 添加decoder masks, 按照顺序进行
+        videos, bool_masked_pos, decode_masked_pos, audios, bool_masked_pos_audio, decode_masked_pos_audio   = batch
 
         if num_samples > 1:
             videos          = rearrange(videos, 'b c (nt t) h w -> (b nt) c t h w', nt=num_samples)
@@ -125,8 +117,7 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
                 videos_patch                                   = rearrange(videos_patch_diff, 'b c (t p0) (h p1) (w p2) -> b (t h w) (p0 p1 p2 c)', t=t_tokenized, h=h_tokenized, w=w_tokenized, p0=2, p1=patch_size, p2=patch_size)
 
             B, _, C   = videos_patch.shape
-            # labels  = videos_patch[bool_masked_pos].reshape(B, -1, C)
-            labels    = videos_patch[~decode_masked_pos].reshape(B, -1, C) # NOTE: 这里使用了[~decode_masked_pos]
+            labels    = videos_patch[~decode_masked_pos].reshape(B, -1, C)
 
             # me: for AUDIO
             if normlize_target_audio:
@@ -139,12 +130,11 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
                 audios_patch   = rearrange(audios, 'b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size_audio, p2=patch_size_audio)
 
             B_audio, _, C_audio   = audios_patch.shape
-            # labels_audio        = audios_patch[bool_masked_pos_audio].reshape(B_audio, -1, C_audio)
-            labels_audio          = audios_patch[~decode_masked_pos_audio].reshape(B_audio, -1, C_audio) # NOTE: 这里使用了[~decode_masked_pos_audio]
+            labels_audio          = audios_patch[~decode_masked_pos_audio].reshape(B_audio, -1, C_audio)
 
         with torch.cuda.amp.autocast():
             # outputs: x, x_audio, logits_per_video, logits_per_audio
-            outputs = model(videos, bool_masked_pos, decode_masked_pos, audios, bool_masked_pos_audio, decode_masked_pos_audio) # NOTE: add decoder masks
+            outputs = model(videos, bool_masked_pos, decode_masked_pos, audios, bool_masked_pos_audio, decode_masked_pos_audio)
 
             # masked audio-visual reconstruction
             # for weighted org target + diff target (assert frame_diff_group_size==2!!!)
@@ -155,17 +145,14 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
                 labels_new  = rearrange(labels, 'b n (p0 c) -> b n p0 c', p0=2)
                 outputs_new = rearrange(outputs[0], 'b n (p0 c) -> b n p0 c', p0=2)
 
-                loss_org    = loss_func(input=outputs_new[:,:,0], target=labels_new[:,:,0]) # keep the same # 如若修改, 直接更换函数定义即可, 但是输入的数目不一样, 需要再看看
+                loss_org    = loss_func(input=outputs_new[:,:,0], target=labels_new[:,:,0])
                 loss_diff   = loss_func_diff(input=outputs_new[:,:,1], target=labels_new[:,:,1]) # keep the same
                 loss_video  = loss_org * (1 - target_diff_weight) + loss_diff * target_diff_weight
 
             else: # NOTE: our choice
 
-                # loss_video  = loss_func(input=outputs[0], target=labels) # old [2024.7.3 16.17]
                 loss_video    = custom_mae_loss(outputs=outputs[0], labels=labels, bool_masked_pos=bool_masked_pos, decode_masked_pos=decode_masked_pos, B=B) # NOTE: new added for VIDEO
 
-
-            # loss_audio = loss_func_audio(input=outputs[1], target=labels_audio) # only for audio
             loss_audio   = custom_mae_loss(outputs=outputs[1], labels=labels_audio, bool_masked_pos=bool_masked_pos_audio, decode_masked_pos=decode_masked_pos_audio, B=B_audio) # NOTE: new added for AUDIO
 
             # MAE Loss
@@ -181,26 +168,18 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
 
             loss = loss + loss_weight * loss_hcmcl
 
-        #----------------------------#
-        # 当loss不可用时, 训练停止
-        # 也就是报nan时终止训练
-        #----------------------------#
         loss_value = loss.item()
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
             sys.exit(1)
 
-        #----------------------#
-        # 优化器清零
-        # 并对参数进行更新
-        #----------------------#
         optimizer.zero_grad()
         # this attribute is added by timm on one optimizer (adahessian)
         is_second_order  = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
         grad_norm        = loss_scaler(loss, optimizer, clip_grad=max_norm, parameters=model.parameters(), create_graph=is_second_order)
         loss_scale_value = loss_scaler.state_dict()["scale"]
 
-        torch.cuda.synchronize() # 进程同步
+        torch.cuda.synchronize()
 
         metric_logger.update(loss=loss_value)
         metric_logger.update(loss_scale=loss_scale_value)
@@ -222,9 +201,6 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
         metric_logger.update(weight_decay=weight_decay_value)
         metric_logger.update(grad_norm=grad_norm)
 
-        #--------------------------#
-        # 对log_writer进行更新
-        #--------------------------#
         if log_writer is not None:
             log_writer.update(loss=loss_value, head="loss")
             log_writer.update(loss_scale=loss_scale_value, head="opt")
@@ -237,9 +213,6 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
         if lr_scheduler is not None:
             lr_scheduler.step_update(start_steps + step)
 
-    #----------------------------#
-    # 从所有进程中汇聚全部的stats
-    #----------------------------#
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
 

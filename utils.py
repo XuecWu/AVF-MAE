@@ -12,7 +12,6 @@ from pathlib import Path
 import subprocess
 import torch
 import torch.distributed as dist
-# from torch._six import inf # PyTorch版本原因
 from math import inf
 import random
 
@@ -290,10 +289,6 @@ def init_distributed_mode(args):
     # assert torch.distributed.is_initialized()
     setup_for_distributed(args.rank == 0)
 
-
-#----------------------------------#
-# 基于给定的fine-tune权重进行加载
-#----------------------------------#
 def load_state_dict(model, state_dict, prefix='', ignore_missing="relative_position_index"):
     missing_keys    = []
     unexpected_keys = []
