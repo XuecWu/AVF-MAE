@@ -1,6 +1,4 @@
-<p align="center">
-    ![Title](figs/title_final.jpg)
-<p>
+![Title](figs/title_final.jpg)
 <h1 align="center">AVF-MAE++ : Scaling Affective Video Facial Masked Autoencoders via Efficient Audio-Visual Self-Supervised Learning</h1>
 <p align="center">
   <a href='https://openaccess.thecvf.com/content/CVPR2025/papers/Wu_AVF-MAE_Scaling_Affective_Video_Facial_Masked_Autoencoders_via_Efficient_Audio-Visual_CVPR_2025_paper.pdf'><img src='https://img.shields.io/badge/CVPR Paper-8A2BE2' alt='CVPR'></a>
