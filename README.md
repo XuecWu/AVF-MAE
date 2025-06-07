@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="figs/title_final.jpg" width=30%> <br>
+  <img src="figs/title_final.jpg" width=20%> <br>
 </p>
 <h1 align="center">AVF-MAE++ : Scaling Affective Video Facial Masked Autoencoders via Efficient Audio-Visual Self-Supervised Learning</h1>
 <p align="center">
