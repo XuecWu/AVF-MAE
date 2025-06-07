@@ -51,7 +51,7 @@
 
 
 ### 🎀 Experimental logs
-Our experimental logs can be found at [Experiemtal logs](logs)
+Our experimental logs for MAFW (11-class) and MSP-IMPROV datasets can be found at [Experiemtal logs](logs)
 
 
 ## 🔨 Installation and Data Preparation
