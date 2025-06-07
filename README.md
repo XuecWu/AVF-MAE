@@ -20,19 +20,19 @@
 ## 🛫 Main Results
 
 <p align="center">
-  <img src="figs/radar_1030.png" width=45%> <br>
+  <img src="figs/radar_1030.png" width=55%> <br>
    Performance comparisons of AVF-MAE++ and state-of-the-art AVFA methods on 17 datasets across CEA, DEA, and MER tasks.
 </p>
 
 
 <p align="center">
-  <img src="figs/CEA-DEA.jpg" width=65%> <br>
+  <img src="figs/CEA-DEA.jpg" width=75%> <br>
    Performance comparisons of AVF-MAE++ with state-of-the-art CEA and DEA methods on twelve datasets.
 </p>
 
 
 <p align="center">
-  <img src="figs/MER.jpg" width=35%> <br>
+  <img src="figs/MER.jpg" width=55%> <br>
    Performance comparisons of AVF-MAE++ and state-ofthe-art MER methods in terms of UF1 (%) on five datasets
 </p>
 
@@ -48,6 +48,10 @@
 
 
 ![Confusion_matrix_on_MAFW](figs/MAFW-Fold5-0315.png)
+
+
+### 🎀 Experimental logs
+Our experimental logs can be found at [Experiemtal logs](logs)
 
 
 ## 🔨 Installation and Data Preparation
