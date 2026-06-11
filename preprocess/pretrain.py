@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 dataset   = "AV-Speech"
-data_path = os.path.expanduser(f'/home/kh31/wxc/3AI25/AVF-MAE/pretrained-datasets/{dataset}')
+data_path = os.path.expanduser(f'./datasets/{dataset}')
 
 split_dir = os.path.join(data_path, 'labels')
 video_dir = os.path.join(data_path, 'videos')
@@ -16,14 +16,10 @@ labels    = ['dummy']
 label2idx = {l:idx for idx, l in enumerate(labels)}
 
 
-#-----------------------#
-# read split file
-# only once
-#-----------------------#
 for split in splits:
 
-    save_dir = f'/home/kh31/wxc/3AI25/AVF-MAE/saved/data/AV-Speech-Final/audio_visual'
-    
+    save_dir = f'./saved/data/AV-Speech-Final/audio_visual'
+
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
@@ -33,7 +29,7 @@ for split in splits:
     train_label_list = []
 
 
-    for v, l in train_label_dict.items(): # example: 00025.mp4 anger
+    for v, l in train_label_dict.items():
         sample_name  = v.split('.')[0]
         video_file   = os.path.join(video_dir, v)
 
@@ -46,5 +42,3 @@ for split in splits:
     new_train_split_file = os.path.join(save_dir, f'AV-Speech-Final-av-pretrain.csv')
     df                   = pd.DataFrame(train_label_list)
     df.to_csv(new_train_split_file, header=None, index=False, sep=' ')
-
-

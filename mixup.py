@@ -108,15 +108,15 @@ class Mixup:
         self.cutmix_minmax = cutmix_minmax
         if self.cutmix_minmax is not None:
             assert len(self.cutmix_minmax) == 2
-            # force cutmix alpha == 1.0 when minmax active to keep logic simple & safe
+
             self.cutmix_alpha = 1.0
         self.mix_prob = prob
         self.switch_prob = switch_prob
         self.label_smoothing = label_smoothing
         self.num_classes = num_classes
         self.mode = mode
-        self.correct_lam = correct_lam  # correct lambda based on clipped area for cutmix
-        self.mixup_enabled = True  # set to false to disable mixing (intended tp be set by train loop)
+        self.correct_lam = correct_lam
+        self.mixup_enabled = True
 
     def _params_per_elem(self, batch_size):
         lam = np.ones(batch_size, dtype=np.float32)
@@ -144,7 +144,7 @@ class Mixup:
         if self.mixup_enabled and np.random.rand() < self.mix_prob:
             if self.mixup_alpha > 0. and self.cutmix_alpha > 0.:
                 use_cutmix = np.random.rand() < self.switch_prob
-                lam_mix = np.random.beta(self.cutmix_alpha, self.cutmix_alpha) if use_cutmix else \
+                lam_mix = np.random.beta(self.cutmix_alpha, self.cutmix_alpha) if use_cutmix else\
                     np.random.beta(self.mixup_alpha, self.mixup_alpha)
             elif self.mixup_alpha > 0.:
                 lam_mix = np.random.beta(self.mixup_alpha, self.mixup_alpha)
@@ -159,7 +159,7 @@ class Mixup:
     def _mix_elem(self, x):
         batch_size = len(x)
         lam_batch, use_cutmix = self._params_per_elem(batch_size)
-        x_orig = x.clone()  # need to keep an unmodified original for mixing source
+        x_orig = x.clone()
         for i in range(batch_size):
             j = batch_size - i - 1
             lam = lam_batch[i]
@@ -176,7 +176,7 @@ class Mixup:
     def _mix_pair(self, x):
         batch_size = len(x)
         lam_batch, use_cutmix = self._params_per_elem(batch_size // 2)
-        x_orig = x.clone()  # need to keep an unmodified original for mixing source
+        x_orig = x.clone()
         for i in range(batch_size // 2):
             j = batch_size - i - 1
             lam = lam_batch[i]
@@ -288,7 +288,7 @@ class FastCollateMixup(Mixup):
             mixed = batch[i][0]
             if lam != 1.:
                 if use_cutmix:
-                    mixed = mixed.copy()  # don't want to modify the original while iterating
+                    mixed = mixed.copy()
                     mixed[..., yl:yh, xl:xh] = batch[j][0][..., yl:yh, xl:xh]
                 else:
                     mixed = mixed.astype(np.float32) * lam + batch[j][0].astype(np.float32) * (1 - lam)
@@ -313,4 +313,3 @@ class FastCollateMixup(Mixup):
         target = mixup_target(target, self.num_classes, lam, self.label_smoothing, device='cpu')
         target = target[:batch_size]
         return output, target
-

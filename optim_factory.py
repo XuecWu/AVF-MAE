@@ -6,8 +6,8 @@ from timm.optim.adahessian import Adahessian
 from timm.optim.adamp import AdamP
 from timm.optim.lookahead import Lookahead
 from timm.optim.nadam import Nadam
-# from timm.optim.novograd import NovoGrad
-# from timm.optim.nvnovograd import NvNovoGrad
+
+
 from timm.optim.radam import RAdam
 from timm.optim.rmsprop_tf import RMSpropTF
 from timm.optim.sgdp import SGDP
@@ -35,7 +35,6 @@ def get_num_layer_for_vit(var_name, num_max_layer):
         return num_max_layer - 1
 
 
-# me: for audio-visual model
 def get_num_layer_for_avit(var_name, num_max_layer, num_modality_specific_layers):
     if any([ele in var_name for ele in ["cls_token", "mask_token", "pos_embed"]]):
         return 0
@@ -44,9 +43,9 @@ def get_num_layer_for_avit(var_name, num_max_layer, num_modality_specific_layers
     elif "rel_pos_bias" in var_name:
         return num_max_layer - 1
     elif "blocks" in var_name:
-        idx = var_name.find("blocks") # ex: encoder.blocks.1.attn.qkv.weight, encoder_audio.blocks.0.attn.qkv.weight
+        idx = var_name.find("blocks")
         layer_id = int(var_name[idx:].split('.')[1])
-        offset = 0 if "fusion" not in var_name else num_modality_specific_layers # ex：encoder_fusion.blocks.0.cross_attn.q.weight
+        offset = 0 if "fusion" not in var_name else num_modality_specific_layers
         layer_id += offset
         return layer_id + 1
     else:
@@ -64,7 +63,6 @@ class LayerDecayValueAssigner(object):
         return get_num_layer_for_vit(var_name, len(self.values))
 
 
-# me: for audio-viusal vit
 class LayerDecayValueAssignerForAudioVisual(object):
     def __init__(self, values, num_modality_specific_layers):
         self.values = values
@@ -83,7 +81,7 @@ def get_parameter_groups(model, weight_decay=1e-5, skip_list=(), get_num_layer=N
 
     for name, param in model.named_parameters():
         if not param.requires_grad:
-            continue  # frozen weights
+            continue
         if len(param.shape) == 1 or name.endswith(".bias") or name in skip_list:
             group_name = "no_decay"
             this_weight_decay = 0.

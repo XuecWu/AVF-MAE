@@ -12,6 +12,7 @@ from pathlib import Path
 import subprocess
 import torch
 import torch.distributed as dist
+
 from math import inf
 import random
 
@@ -191,7 +192,7 @@ def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
-    
+
 def _load_checkpoint_for_ema(model_ema, checkpoint):
     """
     Workaround for ModelEma._load_checkpoint to accept an already-loaded object
@@ -286,8 +287,9 @@ def init_distributed_mode(args):
     torch.distributed.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                          world_size=args.world_size, rank=args.rank)
     torch.distributed.barrier()
-    # assert torch.distributed.is_initialized()
+
     setup_for_distributed(args.rank == 0)
+
 
 def load_state_dict(model, state_dict, prefix='', ignore_missing="relative_position_index"):
     missing_keys    = []
@@ -304,7 +306,7 @@ def load_state_dict(model, state_dict, prefix='', ignore_missing="relative_posit
 
         module._load_from_state_dict(
             state_dict, prefix, local_metadata, True, missing_keys, unexpected_keys, error_msgs)
-        
+
         for name, child in module._modules.items():
             if child is not None:
                 load(child, prefix + name + '.')
@@ -330,15 +332,15 @@ def load_state_dict(model, state_dict, prefix='', ignore_missing="relative_posit
     if len(missing_keys) > 0:
         print("Weights of {} not initialized from pretrained model: {}".format(
             model.__class__.__name__, missing_keys))
-        
+
     if len(unexpected_keys) > 0:
         print("Weights from pretrained model not used in {}: {}".format(
             model.__class__.__name__, unexpected_keys))
-        
+
     if len(ignore_missing_keys) > 0:
         print("Ignored weights of {} not initialized from pretrained model: {}".format(
             model.__class__.__name__, ignore_missing_keys))
-        
+
     if len(error_msgs) > 0:
         print('\n'.join(error_msgs))
 
@@ -354,7 +356,7 @@ class NativeScalerWithGradNormCount:
         if update_grad:
             if clip_grad is not None:
                 assert parameters is not None
-                self._scaler.unscale_(optimizer)  # unscale the gradients of optimizer's assigned params in-place
+                self._scaler.unscale_(optimizer)
                 norm = torch.nn.utils.clip_grad_norm_(parameters, clip_grad)
             else:
                 self._scaler.unscale_(optimizer)
@@ -435,7 +437,7 @@ def save_model(args, epoch, model, model_without_ddp, optimizer, loss_scaler, mo
 def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, model_ema=None):
     output_dir = Path(args.output_dir)
     if loss_scaler is not None:
-        # torch.amp
+
         if args.auto_resume and len(args.resume) == 0:
             import glob
             all_checkpoints = glob.glob(os.path.join(output_dir, 'checkpoint-*.pth'))
@@ -458,7 +460,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
             print("Resume checkpoint %s" % args.resume)
             if 'optimizer' in checkpoint and 'epoch' in checkpoint:
                 optimizer.load_state_dict(checkpoint['optimizer'])
-                # me: handling to eval best checkpoint
+
                 if checkpoint['epoch'] != 'best':
                     args.start_epoch = checkpoint['epoch'] + 1
                 else:
@@ -469,7 +471,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
                     loss_scaler.load_state_dict(checkpoint['scaler'])
                 print("With optim & sched!")
     else:
-        # deepspeed, only support '--auto_resume'.
+
         if args.auto_resume:
             import glob
             all_checkpoints = glob.glob(os.path.join(output_dir, 'checkpoint-*'))

@@ -35,8 +35,7 @@ _PIL_VER = tuple([int(x) for x in PIL.__version__.split(".")[:2]])
 
 _FILL = (128, 128, 128)
 
-# This signifies the max integer that the controller RNN could predict for the
-# augmentation scheme.
+
 _MAX_LEVEL = 10.0
 
 _HPARAMS_DEFAULT = {
@@ -198,27 +197,27 @@ def _randomly_negate(v):
 
 
 def _rotate_level_to_arg(level, _hparams):
-    # range [-30, 30]
+
     level = (level / _MAX_LEVEL) * 30.0
     level = _randomly_negate(level)
     return (level,)
 
 
 def _enhance_level_to_arg(level, _hparams):
-    # range [0.1, 1.9]
+
     return ((level / _MAX_LEVEL) * 1.8 + 0.1,)
 
 
 def _enhance_increasing_level_to_arg(level, _hparams):
-    # the 'no change' level is 1.0, moving away from that towards 0. or 2.0 increases the enhancement blend
-    # range [0.1, 1.9]
+
+
     level = (level / _MAX_LEVEL) * 0.9
     level = 1.0 + _randomly_negate(level)
     return (level,)
 
 
 def _shear_level_to_arg(level, _hparams):
-    # range [-0.3, 0.3]
+
     level = (level / _MAX_LEVEL) * 0.3
     level = _randomly_negate(level)
     return (level,)
@@ -232,7 +231,7 @@ def _translate_abs_level_to_arg(level, hparams):
 
 
 def _translate_rel_level_to_arg(level, hparams):
-    # default range [-0.45, 0.45]
+
     translate_pct = hparams.get("translate_pct", 0.45)
     level = (level / _MAX_LEVEL) * translate_pct
     level = _randomly_negate(level)
@@ -240,40 +239,37 @@ def _translate_rel_level_to_arg(level, hparams):
 
 
 def _posterize_level_to_arg(level, _hparams):
-    # As per Tensorflow TPU EfficientNet impl
-    # range [0, 4], 'keep 0 up to 4 MSB of original image'
-    # intensity/severity of augmentation decreases with level
+
+
     return (int((level / _MAX_LEVEL) * 4),)
 
 
 def _posterize_increasing_level_to_arg(level, hparams):
-    # As per Tensorflow models research and UDA impl
-    # range [4, 0], 'keep 4 down to 0 MSB of original image',
-    # intensity/severity of augmentation increases with level
+
+
     return (4 - _posterize_level_to_arg(level, hparams)[0],)
 
 
 def _posterize_original_level_to_arg(level, _hparams):
-    # As per original AutoAugment paper description
-    # range [4, 8], 'keep 4 up to 8 MSB of image'
-    # intensity/severity of augmentation decreases with level
+
+
     return (int((level / _MAX_LEVEL) * 4) + 4,)
 
 
 def _solarize_level_to_arg(level, _hparams):
-    # range [0, 256]
-    # intensity/severity of augmentation decreases with level
+
+
     return (int((level / _MAX_LEVEL) * 256),)
 
 
 def _solarize_increasing_level_to_arg(level, _hparams):
-    # range [0, 256]
-    # intensity/severity of augmentation increases with level
+
+
     return (256 - _solarize_level_to_arg(level, _hparams)[0],)
 
 
 def _solarize_add_level_to_arg(level, _hparams):
-    # range [0, 110]
+
     return (int((level / _MAX_LEVEL) * 110),)
 
 
@@ -282,7 +278,7 @@ LEVEL_TO_ARG = {
     "Equalize": None,
     "Invert": None,
     "Rotate": _rotate_level_to_arg,
-    # There are several variations of the posterize level scaling in various Tensorflow/Google repositories/papers
+
     "Posterize": _posterize_level_to_arg,
     "PosterizeIncreasing": _posterize_increasing_level_to_arg,
     "PosterizeOriginal": _posterize_original_level_to_arg,
@@ -355,10 +351,7 @@ class AugmentOp:
             else _RANDOM_INTERPOLATION,
         }
 
-        # If magnitude_std is > 0, we introduce some randomness
-        # in the usually fixed policy and sample magnitude from a normal distribution
-        # with mean `magnitude` and std-dev of `magnitude_std`.
-        # NOTE This is my own hack, being tested, not in papers or reference impls.
+
         self.magnitude_std = self.hparams.get("magnitude_std", 0)
 
     def __call__(self, img_list):
@@ -367,7 +360,7 @@ class AugmentOp:
         magnitude = self.magnitude
         if self.magnitude_std and self.magnitude_std > 0:
             magnitude = random.gauss(magnitude, self.magnitude_std)
-        magnitude = min(_MAX_LEVEL, max(0, magnitude))  # clip to valid range
+        magnitude = min(_MAX_LEVEL, max(0, magnitude))
         level_args = (
             self.level_fn(magnitude, self.hparams)
             if self.level_fn is not None
@@ -420,8 +413,6 @@ _RAND_INCREASING_TRANSFORMS = [
 ]
 
 
-# These experimental weights are based loosely on the relative improvements mentioned in paper.
-# They may not result in increased performance, but could likely be tuned to so.
 _RAND_CHOICE_WEIGHTS_0 = {
     "Rotate": 0.3,
     "ShearX": 0.2,
@@ -443,7 +434,7 @@ _RAND_CHOICE_WEIGHTS_0 = {
 
 def _select_rand_weights(weight_idx=0, transforms=None):
     transforms = transforms or _RAND_TRANSFORMS
-    assert weight_idx == 0  # only one set of weights currently
+    assert weight_idx == 0
     rand_weights = _RAND_CHOICE_WEIGHTS_0
     probs = [rand_weights[k] for k in transforms]
     probs /= np.sum(probs)
@@ -466,7 +457,7 @@ class RandAugment:
         self.choice_weights = choice_weights
 
     def __call__(self, img):
-        # no replacement when using weighted choice
+
         ops = np.random.choice(
             self.ops,
             self.num_layers,
@@ -496,9 +487,9 @@ def rand_augment_transform(config_str, hparams):
     :param hparams: Other hparams (kwargs) for the RandAugmentation scheme
     :return: A PyTorch compatible Transform
     """
-    magnitude = _MAX_LEVEL  # default to _MAX_LEVEL for magnitude (currently 10)
-    num_layers = 2  # default to 2 ops per image
-    weight_idx = None  # default to no probability weights for op choice
+    magnitude = _MAX_LEVEL
+    num_layers = 2
+    weight_idx = None
     transforms = _RAND_TRANSFORMS
     config = config_str.split("-")
     assert config[0] == "rand"
@@ -509,7 +500,7 @@ def rand_augment_transform(config_str, hparams):
             continue
         key, val = cs[:2]
         if key == "mstd":
-            # noise param injected via hparams for now
+
             hparams.setdefault("magnitude_std", float(val))
         elif key == "inc":
             if bool(val):

@@ -17,7 +17,7 @@ class GroupRandomCrop(object):
 
     def __call__(self, img_tuple):
         img_group, label = img_tuple
-        
+
         w, h = img_group[0].size
         th, tw = self.size
 
@@ -54,8 +54,8 @@ class GroupNormalize(object):
         tensor, label = tensor_tuple
         rep_mean = self.mean * (tensor.size()[0]//len(self.mean))
         rep_std = self.std * (tensor.size()[0]//len(self.std))
-        
-        # TODO: make efficient
+
+
         for t, m, s in zip(tensor, rep_mean, rep_std):
             t.sub_(m).div_(s)
 
@@ -70,7 +70,7 @@ class GroupGrayScale(object):
         img_group, label = img_tuple
         return ([self.worker(img) for img in img_group], label)
 
-    
+
 class GroupScale(object):
     """ Rescales the input PIL.Image to the given 'size'.
     'size' will be the size of the smaller edge.
@@ -100,7 +100,7 @@ class GroupMultiScaleCrop(object):
 
     def __call__(self, img_tuple):
         img_group, label = img_tuple
-        
+
         im_size = img_group[0].size
 
         crop_w, crop_h, offset_w, offset_h = self._sample_crop_size(im_size)
@@ -111,7 +111,7 @@ class GroupMultiScaleCrop(object):
     def _sample_crop_size(self, im_size):
         image_w, image_h = im_size[0], im_size[1]
 
-        # find a crop size
+
         base_size = min(image_w, image_h)
         crop_sizes = [int(base_size * x) for x in self.scales]
         crop_h = [self.input_size[1] if abs(x - self.input_size[1]) < 3 else x for x in crop_sizes]
@@ -142,22 +142,22 @@ class GroupMultiScaleCrop(object):
         h_step = (image_h - crop_h) // 4
 
         ret = list()
-        ret.append((0, 0))  # upper left
-        ret.append((4 * w_step, 0))  # upper right
-        ret.append((0, 4 * h_step))  # lower left
-        ret.append((4 * w_step, 4 * h_step))  # lower right
-        ret.append((2 * w_step, 2 * h_step))  # center
+        ret.append((0, 0))
+        ret.append((4 * w_step, 0))
+        ret.append((0, 4 * h_step))
+        ret.append((4 * w_step, 4 * h_step))
+        ret.append((2 * w_step, 2 * h_step))
 
         if more_fix_crop:
-            ret.append((0, 2 * h_step))  # center left
-            ret.append((4 * w_step, 2 * h_step))  # center right
-            ret.append((2 * w_step, 4 * h_step))  # lower center
-            ret.append((2 * w_step, 0 * h_step))  # upper center
+            ret.append((0, 2 * h_step))
+            ret.append((4 * w_step, 2 * h_step))
+            ret.append((2 * w_step, 4 * h_step))
+            ret.append((2 * w_step, 0 * h_step))
 
-            ret.append((1 * w_step, 1 * h_step))  # upper left quarter
-            ret.append((3 * w_step, 1 * h_step))  # upper right quarter
-            ret.append((1 * w_step, 3 * h_step))  # lower left quarter
-            ret.append((3 * w_step, 3 * h_step))  # lower righ quarter
+            ret.append((1 * w_step, 1 * h_step))
+            ret.append((3 * w_step, 1 * h_step))
+            ret.append((1 * w_step, 3 * h_step))
+            ret.append((3 * w_step, 3 * h_step))
         return ret
 
 
@@ -168,7 +168,7 @@ class Stack(object):
 
     def __call__(self, img_tuple):
         img_group, label = img_tuple
-        
+
         if img_group[0].mode == 'L':
             return (np.concatenate([np.expand_dims(x, 2) for x in img_group], axis=2), label)
         elif img_group[0].mode == 'RGB':
@@ -186,16 +186,16 @@ class ToTorchFormatTensor(object):
 
     def __call__(self, pic_tuple):
         pic, label = pic_tuple
-        
+
         if isinstance(pic, np.ndarray):
-            # handle numpy array
+
             img = torch.from_numpy(pic).permute(2, 0, 1).contiguous()
         else:
-            # handle PIL Image
+
             img = torch.ByteTensor(torch.ByteStorage.from_buffer(pic.tobytes()))
             img = img.view(pic.size[1], pic.size[0], len(pic.mode))
-            # put it from HWC to CHW format
-            # yikes, this transpose takes 80% of the loading time/CPU
+
+
             img = img.transpose(0, 1).transpose(0, 2).contiguous()
         return (img.float().div(255.) if self.div else img.float(), label)
 

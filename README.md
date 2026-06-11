@@ -1,110 +1,174 @@
 <p align="center">
-  <img src="figs/title_final.jpg" width=20%> <br>
-</p>
-<h1 align="center">AVF-MAE++ : Scaling Affective Video Facial Masked Autoencoders via Efficient Audio-Visual Self-Supervised Learning</h1>
-<p align="center">
-  <a href='https://openaccess.thecvf.com/content/CVPR2025/papers/Wu_AVF-MAE_Scaling_Affective_Video_Facial_Masked_Autoencoders_via_Efficient_Audio-Visual_CVPR_2025_paper.pdf'><img src='https://img.shields.io/badge/CVPR Paper-8A2BE2' alt='CVPR'></a>
-  <a href='https://huggingface.co/Conna/AVF-MAE'><img src='https://img.shields.io/badge/Model-Huggingface-yellow?logo=huggingface&logoColor=yellow' alt='Model'></a>
-
-> [Xuecheng Wu](https://scholar.google.com.hk/citations?user=MuTEp7sAAAAJ), [Heli Sun](https://scholar.google.com.hk/citations?user=HXjwuE4AAAAJ), Yifan Wang, Jiayu Nie, [Jie Zhang](https://scholar.google.com.hk/citations?user=7YkR3CoAAAAJ), [Yabing Wang](https://scholar.google.com.hk/citations?user=3WVFdMUAAAAJ), [Junxiao Xue](https://scholar.google.com.hk/citations?user=Za9YFVIAAAAJ), Liang He<br>
-> Xi'an Jiaotong University & University of Science and Technology of China & A*STAR & Zhejiang Lab<br>
-
-
-
-## 🌟 Overview
-![AVF-MAE++](figs/AVF-MAE++_v6_0315.png)
-
-**Abstract: Affective Video Facial Analysis (AVFA) is important for advancing emotion-aware AI, yet the persistent data scarcity in AVFA presents challenges. Recently, the self-supervised learning (SSL) technique of Masked Autoencoders (MAE) has gained significant attention, particularly in its audio-visual adaptation. Insights from general domains suggest that scaling is vital for unlocking impressive improvements, though its effects on AVFA remain largely unexplored. Additionally, capturing both intra- and inter-modal correlations through scalable representations is a crucial challenge in this field. To tackle these gaps, we introduce AVF-MAE++, a series audio-visual MAE designed to explore the impact of scaling on AVFA with a focus on advanced correlation modeling. Our method incorporates a novel audio-visual dual masking strategy and an improved modality encoder with a holistic view to better support scalable pre-training. Furthermore, we propose the Iteratively Audio-Visual Correlations Learning Module to improve correlations capture within the SSL framework, bridging the limitations of prior methods. To support smooth adaptation and mitigate overfitting, we also introduce a progressive semantics injection strategy, which structures training in three stages. Extensive experiments across 17 datasets, spanning three key AVFA tasks, demonstrate the superior performance of AVF-MAE++, establishing new state-of-the-art outcomes. Ablation studies provide further insights into the critical design choices driving these gains.**
-
-
-## 🛫 Main Results
-
-<p align="center">
-  <img src="figs/radar_1030.png" width=55%> <br>
-   Performance comparisons of AVF-MAE++ and state-of-the-art AVFA methods on 17 datasets across CEA, DEA, and MER tasks.
+  <img src="figs/title_final.jpg" width="20%" alt="AVF-MAE++ logo"><br>
 </p>
 
+<h1 align="center">AVF-MAE++: Scaling Affective Video Facial Masked Autoencoders via Efficient Audio-Visual Self-Supervised Learning</h1>
 
 <p align="center">
-  <img src="figs/CEA-DEA.jpg" width=75%> <br>
-   Performance comparisons of AVF-MAE++ with state-of-the-art CEA and DEA methods on twelve datasets.
+  <a href="https://openaccess.thecvf.com/content/CVPR2025/papers/Wu_AVF-MAE_Scaling_Affective_Video_Facial_Masked_Autoencoders_via_Efficient_Audio-Visual_CVPR_2025_paper.pdf"><img src="https://img.shields.io/badge/CVPR-2025-8A2BE2" alt="CVPR 2025"></a>
+  <a href="https://huggingface.co/Conna/AVF-MAE"><img src="https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface" alt="HuggingFace model"></a>
+  <img src="https://img.shields.io/badge/License-Apache--2.0-blue" alt="License">
 </p>
-
 
 <p align="center">
-  <img src="figs/MER.jpg" width=55%> <br>
-   Performance comparisons of AVF-MAE++ and state-ofthe-art MER methods in terms of UF1 (%) on five datasets
+  Xuecheng Wu, Heli Sun, Yifan Wang, Jiayu Nie, Jie Zhang, Yabing Wang, Junxiao Xue, Liang He
 </p>
 
+<p align="center">
+  Xi'an Jiaotong University · University of Science and Technology of China · A*STAR · Zhejiang Lab
+</p>
 
-## 🌞 Visualizations
+## Overview
 
-### 🌟 Audio-visual reconstructions
+AVF-MAE++ is an audio-visual self-supervised learning framework for affective video facial analysis. It scales masked autoencoding to affective facial video representation learning and improves audio-visual correlation modeling through dual masking, local-global attention, and progressive semantic injection.
 
-![Audio-visual_reconstructions](figs/overall_reconstruction-0317.png)
+<p align="center">
+  <img src="figs/AVF-MAE++_v6_0315.png" width="90%" alt="AVF-MAE++ overview">
+</p>
 
+The repository contains the training, pretraining, fine-tuning, evaluation, preprocessing, and experiment script code used for AVF-MAE++.
 
-### 🌟 Confusion matrix on MAFW (11-class) dataset
+## Main Results
 
+<p align="center">
+  <img src="figs/radar_1030.png" width="55%" alt="Overall comparison"><br>
+  Performance comparisons on 17 datasets across CEA, DEA, and MER tasks.
+</p>
 
-![Confusion_matrix_on_MAFW](figs/MAFW-Fold5-0315.png)
+<p align="center">
+  <img src="figs/CEA-DEA.jpg" width="75%" alt="CEA and DEA results"><br>
+  Comparison with state-of-the-art CEA and DEA methods.
+</p>
 
+<p align="center">
+  <img src="figs/MER.jpg" width="55%" alt="MER results"><br>
+  Comparison with state-of-the-art MER methods in terms of UF1.
+</p>
 
-### 🎀 Experimental logs
-Our experimental logs for MAFW (11-class) and MSP-IMPROV datasets can be found at [Experiemtal logs](logs)
+## Repository Structure
 
-
-## 🔨 Installation and Data Preparation
-
-**Regarding this part, please refer to [HiCMAE](https://github.com/sunlicai/HiCMAE) for the detailed reference.**
-
-
-## 🚀 Pre-train HiCMAE
-
-- Mix-hybrid-data
-
-    ```
-    bash scripts/audio_visual/huge/pretrain/pretrain-huge-mix-data.sh
-    ```
-
-## 🚗 Fine-tuning with pre-trained models
-**TBD**
-
-
-
-<!-- TODO List -->
-## 🚧 TODO List
-- [x] Release pretraining code
-- [ ] Release hybrid intermediate and targeted fine-tuning code
-- [ ] Infill the detailed README
-
-**Too busy these days, our TODO list will be tackled soon.**
-
-
-## 👍 Acknowledgements
-
-This project is built upon [HiCMAE](https://github.com/sunlicai/HiCMAE), [MAE-DFER](https://github.com/sunlicai/MAE-DFER), [VideoMAE](https://github.com/MCG-NJU/VideoMAE), and [AudioMAE](https://github.com/facebookresearch/AudioMAE). Thanks for their insightful and great codebase.
-
-
-## ✏️ Citation
-**If you find this paper useful in your research, please consider citing:**
-
+```text
+.
+├── run_mae_pretraining_av.py        # audio-visual masked autoencoder pretraining
+├── run_class_finetuning_av.py       # fine-tuning and evaluation
+├── modeling_pretrain_av.py          # pretraining architecture
+├── modeling_finetune_av.py          # fine-tuning architecture
+├── modeling_attention_av.py         # attention and fusion blocks
+├── engine_for_pretraining_av.py     # pretraining loop
+├── engine_for_finetuning_av.py      # fine-tuning/evaluation loop
+├── datasets_av.py                   # dataset factory
+├── kinetics_av.py                   # video/audio dataset implementation
+├── preprocess/                      # dataset list generation and preprocessing utilities
+└── scripts/                         # example pretraining, fine-tuning, and evaluation scripts
 ```
+
+## Installation
+
+Create a Python environment and install dependencies:
+
+```bash
+conda create -n avfmaepp python=3.8 -y
+conda activate avfmaepp
+pip install -r requirements.txt
+```
+
+Install a PyTorch build that matches your CUDA environment. Some data preprocessing utilities require external tools such as `ffmpeg` and OpenFace.
+
+## Data Preparation
+
+Datasets and generated split files are not included in this repository. The training scripts expect preprocessed audio-visual list files under local paths such as:
+
+```text
+saved/data/<dataset>/audio_visual/.../*.csv
+datasets/<dataset>/...
+```
+
+Each row in a generated split file should point to visual frames, audio files, and labels according to the dataset loader used by `datasets_av.py` and `kinetics_av.py`.
+
+The `preprocess/` directory provides scripts for generating these audio-visual list files for supported datasets. Review dataset paths before running them on a new machine.
+
+## Pretraining
+
+Example single-node pretraining command:
+
+```bash
+python -m torch.distributed.launch --nproc_per_node=1 run_mae_pretraining_av.py \
+  --model pretrain_hicmae_dim512_patch16_160_a256 \
+  --data_path saved/data/mix-data/audio_visual/pretrain.csv \
+  --output_dir saved/model/avfmaepp_pretrain \
+  --log_dir saved/model/avfmaepp_pretrain \
+  --batch_size 32 \
+  --epochs 100 \
+  --input_size 160 \
+  --input_size_audio 256 \
+  --mask_ratio 0.75 \
+  --mask_ratio_audio 0.8
+```
+
+## Fine-tuning and Evaluation
+
+Example fine-tuning command on an affective video dataset:
+
+```bash
+python -m torch.distributed.launch --nproc_per_node=1 run_class_finetuning_av.py \
+  --model avit_dim768_patch16_160_a256 \
+  --data_set MAFW \
+  --nb_classes 11 \
+  --data_path saved/data/MAFW/audio_visual/single/split01 \
+  --finetune /path/to/pretrained_checkpoint.pth \
+  --output_dir saved/model/avfmaepp_finetune \
+  --log_dir saved/model/avfmaepp_finetune \
+  --batch_size 8 \
+  --epochs 100 \
+  --input_size 160 \
+  --input_size_audio 256
+```
+
+The `scripts/` directory contains additional experiment templates for different model scales, pretraining data mixtures, and downstream datasets. Before running a script, check the following variables:
+
+- `DATA_PATH`
+- `OUTPUT_DIR`
+- `CHECKPOINT`
+- `CUDA_VISIBLE_DEVICES`
+
+## Model Weights
+
+Pretrained models are hosted on HuggingFace:
+
+https://huggingface.co/Conna/AVF-MAE
+
+Weights and checkpoints are intentionally not committed to this repository.
+
+## Notes
+
+- Dataset files, generated CSV files, checkpoints, logs, and evaluation outputs are ignored by git.
+- The codebase is designed for CUDA-based distributed training.
+- The example commands are templates; adapt paths and hyperparameters to your local environment.
+
+## Acknowledgements
+
+This project builds on ideas and code from HiCMAE, MAE-DFER, VideoMAE, AudioMAE, and timm. We thank the authors for their open-source contributions.
+
+## Citation
+
+If this repository is useful for your research, please cite:
+
+```bibtex
 @InProceedings{Wu_2025_CVPR,
     author    = {Wu, Xuecheng and Sun, Heli and Wang, Yifan and Nie, Jiayu and Zhang, Jie and Wang, Yabing and Xue, Junxiao and He, Liang},
     title     = {AVF-MAE++: Scaling Affective Video Facial Masked Autoencoders via Efficient Audio-Visual Self-Supervised Learning},
     booktitle = {Proceedings of the Computer Vision and Pattern Recognition Conference (CVPR)},
     month     = {June},
     year      = {2025},
-    pages     = {9142-9153}
+    pages     = {9142--9153}
 }
 ```
 
-**You can also consider citing the following related papers:**
+Related work:
 
-```
+```bibtex
 @article{sun2024hicmae,
-  title={Hicmae: Hierarchical contrastive masked autoencoder for self-supervised audio-visual emotion recognition},
+  title={HiCMAE: Hierarchical Contrastive Masked Autoencoder for Self-Supervised Audio-Visual Emotion Recognition},
   author={Sun, Licai and Lian, Zheng and Liu, Bin and Tao, Jianhua},
   journal={Information Fusion},
   volume={108},
@@ -114,22 +178,12 @@ This project is built upon [HiCMAE](https://github.com/sunlicai/HiCMAE), [MAE-DF
 }
 ```
 
-```
+```bibtex
 @inproceedings{sun2023mae,
-  title={Mae-dfer: Efficient masked autoencoder for self-supervised dynamic facial expression recognition},
+  title={MAE-DFER: Efficient Masked Autoencoder for Self-Supervised Dynamic Facial Expression Recognition},
   author={Sun, Licai and Lian, Zheng and Liu, Bin and Tao, Jianhua},
   booktitle={Proceedings of the 31st ACM International Conference on Multimedia},
   pages={6110--6121},
   year={2023}
-}
-```
-
-```
-@article{sun2024svfap,
-  title={SVFAP: Self-supervised video facial affect perceiver},
-  author={Sun, Licai and Lian, Zheng and Wang, Kexin and He, Yu and Xu, Mingyu and Sun, Haiyang and Liu, Bin and Tao, Jianhua},
-  journal={IEEE Transactions on Affective Computing},
-  year={2024},
-  publisher={IEEE}
 }
 ```

@@ -1,8 +1,15 @@
+\
+\
+\
+\
+
+
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.layers import drop_path
+
 
 class DropPath(nn.Module):
     """
@@ -14,7 +21,7 @@ class DropPath(nn.Module):
 
     def forward(self, x):
         return drop_path(x, self.drop_prob, self.training)
-    
+
     def extra_repr(self) -> str:
         return 'p={}'.format(self.drop_prob)
 
@@ -39,6 +46,7 @@ class Mlp(nn.Module):
         x = self.drop(x)
 
         return x
+
 
 class Attention(nn.Module):
     def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., attn_head_dim=None):
@@ -74,19 +82,16 @@ class Attention(nn.Module):
         if self.q_bias is not None:
             qkv_bias = torch.cat((self.q_bias, torch.zeros_like(self.v_bias, requires_grad=False), self.v_bias))
 
-        # qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
 
         qkv     = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
         qkv     = qkv.reshape(B, N, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
 
-        q, k, v = qkv[0], qkv[1], qkv[2]   # make torchscript happy (cannot use tensor as tuple)
+        q, k, v = qkv[0], qkv[1], qkv[2]
 
         q       = q * self.scale
         attn    = (q @ k.transpose(-2, -1))
-        
-        #---------------------------#
-        # me: support window mask
-        #---------------------------#
+
+
         if mask is not None:
             nW   = mask.shape[0]
             attn = attn.view(B // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
@@ -108,6 +113,8 @@ class Attention(nn.Module):
 """
 adapted from https://github.com/lucidrains/perceiver-pytorch/blob/main/perceiver_pytorch/perceiver_pytorch.py
 """
+
+
 class GeneralAttention(nn.Module):
     def __init__(self, dim, context_dim=None, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., attn_head_dim=None):
         super().__init__()
@@ -143,23 +150,25 @@ class GeneralAttention(nn.Module):
         if self.q_bias is not None:
             kv_bias     = torch.cat((torch.zeros_like(self.v_bias, requires_grad=False), self.v_bias))
 
+
         q        = F.linear(input=x, weight=self.q.weight, bias=q_bias)
-        q        = q.reshape(B, T1, self.num_heads, -1).transpose(1, 2) # me: (B, H, T1, C//H)
+        q        = q.reshape(B, T1, self.num_heads, -1).transpose(1, 2)
 
         kv       = F.linear(input=x if context is None else context, weight=self.kv.weight, bias=kv_bias)
 
         _, T2, _ = kv.shape
         kv       = kv.reshape(B, T2, 2, self.num_heads, -1).permute(2, 0, 3, 1, 4)
-        k, v     = kv[0], kv[1] # make torchscript happy (cannot use tensor as tuple), me： (B, H, T2, C//H)
+        k, v     = kv[0], kv[1]
 
 
         q        = q * self.scale
-        attn     = (q @ k.transpose(-2, -1)) # me: (B, H, T1, T2)
+        attn     = (q @ k.transpose(-2, -1))
 
         attn     = attn.softmax(dim=-1)
         attn     = self.attn_drop(attn)
 
-        x        = (attn @ v).transpose(1, 2).reshape(B, T1, -1) # (B, H, T1, C//H) -> (B, T1, H, C//H) -> (B, T1, C)
+        x        = (attn @ v).transpose(1, 2).reshape(B, T1, -1)
+
 
         x        = self.proj(x)
         x        = self.proj_drop(x)
@@ -196,24 +205,26 @@ class IterativeRefinement(nn.Module):
     def forward(self, x_a: torch.Tensor, x_v: torch.Tensor, x: torch.Tensor):
         _, _, C = x.shape
 
+
         if self.concat_dim == C:
-            x = self.post_extract_proj(x) # [B, N, 2C] -> [B, N, C]
+            x = self.post_extract_proj(x)
 
 
-        q, k, v        = x, x_a.transpose(1, 2).contiguous(), x_a  # q=[B, N, C], k=[B, C, N], v=[B, N, C]
+        q, k, v        = x, x_a.transpose(1, 2).contiguous(), x_a
 
         attn_map       = torch.softmax(torch.matmul(q, k) / math.sqrt(self.embedding_dim), dim=-1)
 
         residual_audio = self.conv_audio(torch.matmul(attn_map, v).transpose(1, 2).contiguous()).transpose(1, 2).contiguous()
 
-        # video residual
-        q, k, v        = x, x_v.transpose(1, 2).contiguous(), x_v  # q=[B, N, C], k=[B, C, N], v=[B, N, C]
+
+        q, k, v        = x, x_v.transpose(1, 2).contiguous(), x_v
 
         attn_map       = torch.softmax(torch.matmul(q, k) / math.sqrt(self.embedding_dim), dim=-1)
 
         residual_video = self.conv_video(torch.matmul(attn_map, v).transpose(1, 2).contiguous()).transpose(1, 2).contiguous()
 
-        x = x + residual_audio + residual_video # NOTE: output=[B, N, C]
+
+        x = x + residual_audio + residual_video
 
         x = self.layer_norm(x)
 
@@ -222,35 +233,35 @@ class IterativeRefinement(nn.Module):
 
 class CSBlock_new_no_Mask(nn.Module):
     def __init__(self, dim, context_dim, num_heads, num_cross_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
-                 drop_path=0., init_values=None, act_layer=nn.GELU, norm_layer=nn.LayerNorm, 
+                 drop_path=0., init_values=None, act_layer=nn.GELU, norm_layer=nn.LayerNorm,
                  attn_head_dim=None, cross_attn_head_dim=None,
                  ):
         super().__init__()
 
 
-        self.cross_attn    = GeneralAttention(dim=dim, context_dim=context_dim, num_heads=num_cross_heads, qkv_bias=qkv_bias, 
+        self.cross_attn    = GeneralAttention(dim=dim, context_dim=context_dim, num_heads=num_cross_heads, qkv_bias=qkv_bias,
                                            qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop, attn_head_dim=cross_attn_head_dim)
-        
-        self.cross_norm1   = norm_layer(dim)         # Q  related
-        self.cross_norm2   = norm_layer(context_dim) # KV related
 
-        # for audio
-        self.cross_attn_a  = GeneralAttention(dim=dim, context_dim=context_dim, num_heads=num_cross_heads, qkv_bias=qkv_bias, 
+        self.cross_norm1   = norm_layer(dim)
+        self.cross_norm2   = norm_layer(context_dim)
+
+
+        self.cross_attn_a  = GeneralAttention(dim=dim, context_dim=context_dim, num_heads=num_cross_heads, qkv_bias=qkv_bias,
                                            qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop, attn_head_dim=cross_attn_head_dim)
-        
-        self.cross_norm1_a = norm_layer(dim)         # Q  related
-        self.cross_norm2_a = norm_layer(context_dim) # KV related
+
+        self.cross_norm1_a = norm_layer(dim)
+        self.cross_norm2_a = norm_layer(context_dim)
 
 
         self.norm1     = norm_layer(dim)
-        self.attn      = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, 
+        self.attn      = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
                                     proj_drop=drop, attn_head_dim=attn_head_dim)
 
 
         self.norm_new  = norm_layer(dim)
-        self.attn_new  = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, 
+        self.attn_new  = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop,
                                     proj_drop=drop, attn_head_dim=attn_head_dim)
-        
+
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
@@ -278,7 +289,6 @@ class CSBlock_new_no_Mask(nn.Module):
             self.gamma_0, self.gamma_1, self.gamma_2 = None, None, None
 
 
-        self.norm3          = norm_layer(dim)
         self.norm3_1        = norm_layer(dim)
 
 
@@ -287,9 +297,10 @@ class CSBlock_new_no_Mask(nn.Module):
 
         self.la1 = nn.Linear(dim * 2, dim)
         self.la2 = nn.Linear(dim * 2, dim)
-    
+
     def forward(self, video, audio):
-        if self.gamma_1 is None: # NOTE: by default
+        if self.gamma_1 is None:
+
 
             video_sa = video + self.drop_path(self.attn(self.norm1(video)))
             audio_sa = audio + self.drop_path(self.attn_new(self.norm_new(audio)))
@@ -309,14 +320,14 @@ class CSBlock_new_no_Mask(nn.Module):
             v_e1  = torch.sigmoid(self.lv1(v_sq))
             v_e2  = torch.sigmoid(self.lv2(v_sq))
             v_out = torch.mul(v_e1, v_sa) + torch.mul(v_e2, v_cma)
-            v_out = self.norm3(v_out)   # new added
+            v_out = self.norm3(v_out)
 
 
             a_sq  = torch.cat((a_sa, a_cma), -1)
             a_e1  = torch.sigmoid(self.la1(a_sq))
             a_e2  = torch.sigmoid(self.la2(a_sq))
             a_out = torch.mul(a_e1, a_sa) + torch.mul(a_e2, a_cma)
-            a_out = self.norm3_1(a_out) # new added
+            a_out = self.norm3_1(a_out)
 
         else:
             raise NotImplementedError('The gamma in CSBlock_new_no_Mask is not NONE!!')
@@ -330,7 +341,7 @@ class VisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
                  drop_path_rate=0., norm_layer=nn.LayerNorm, init_values=None,):
         super().__init__()
 
-        dpr         = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        dpr         = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]
 
 
         self.blocks = nn.ModuleList([
@@ -347,16 +358,17 @@ class VisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
         self.Iterative_Refinement_Module = IterativeRefinement(dim=embed_dim, concat_dim=2 * embed_dim)
 
 
-        self.cross_attn                  = GeneralAttention(dim=embed_dim, context_dim=embed_dim, num_heads=num_heads, qkv_bias=qkv_bias, 
-                                           qk_scale=qk_scale, attn_drop=attn_drop_rate, proj_drop=drop_rate, attn_head_dim=None) # 跨注意力
+        self.cross_attn                  = GeneralAttention(dim=embed_dim, context_dim=embed_dim, num_heads=num_heads, qkv_bias=qkv_bias,
+                                           qk_scale=qk_scale, attn_drop=attn_drop_rate, proj_drop=drop_rate, attn_head_dim=None)
 
 
-        self.cross_norm_1     = norm_layer(embed_dim)       
+        self.cross_norm_1     = norm_layer(embed_dim)
         self.cross_norm_2     = norm_layer(embed_dim)
         self.cross_norm_3     = norm_layer(embed_dim_audio)
 
+
         self.norm       = norm_layer(embed_dim)
-        self.norm_audio = norm_layer(embed_dim_audio) # do not share norm layer
+        self.norm_audio = norm_layer(embed_dim_audio)
 
 
         self.vadaptiveinteraction  = Attention(embed_dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop_rate, proj_drop=drop_rate, attn_head_dim=None)
@@ -369,13 +381,14 @@ class VisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
         mlp_hidden_dim        = int(embed_dim * mlp_ratio)
         mlp_hidden_dim_audio  = int(embed_dim_audio * mlp_ratio)
 
-        # video
+
         self.norm_att_v       = norm_layer(embed_dim)
         self.mlp_att_v        = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)
 
-        # audio
+
         self.norm_att_a       = norm_layer(embed_dim_audio)
         self.mlp_att_a        = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate)
+
 
         self.norm_att_v_IR    = norm_layer(embed_dim)
         self.norm_att_a_IR    = norm_layer(embed_dim_audio)
@@ -429,64 +442,57 @@ class VisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
         video_stage_list = []
         audio_stage_list = []
         for blk in self.blocks:
-            x, x_audio   = blk(video=x, audio=x_audio) # [20, 8, 512]
-            x_overall    = self.Iterative_Refinement_Module(x_audio, x, x_overall) 
+            x, x_audio   = blk(video=x, audio=x_audio)
+            x_overall    = self.Iterative_Refinement_Module(x_audio, x, x_overall)
 
             video_stage_list.append(x)
             audio_stage_list.append(x_audio)
-        
-        # print(f'The length of video_stage_list is {len(video_stage_list)}') # 2
-        # print(f'The length of audio_stage_list is {len(audio_stage_list)}') # 2
-
-        v_stage = torch.stack(video_stage_list, dim=2) # stage_num * [B, N, C] -> [B, N, stage_num, C]
-        a_stage = torch.stack(audio_stage_list, dim=2) # stage_num * [B, N, C] -> [B, N, stage_num, C]
-
-        # print('After blks and stacking')
-        # print(f'video shape {v_stage.shape}') # [20, 8, 2, 512]
-        # print(f'audio shape {a_stage.shape}') # [20, 8, 2, 512]
-
-        v_stage = v_stage.view(-1, v_stage.size(2), v_stage.size(3)) # [B * N, stage_num, C]
-        a_stage = a_stage.view(-1, a_stage.size(2), a_stage.size(3)) # [B * N, stage_num, C]
 
 
-        v_interact    = v_stage + self.drop_path(self.vadaptiveinteraction(self.norm(v_stage)))       # [B * N, stage_num, C]
-        a_interact    = a_stage + self.drop_path(self.aadaptiveinteraction(self.norm_audio(a_stage))) # [B * N, stage_num, C]
-
-        v_interact    = v_interact + self.drop_path(self.mlp_att_v(self.norm_att_v(v_interact))) # [B * N, stage_num, C]
-        a_interact    = a_interact + self.drop_path(self.mlp_att_a(self.norm_att_a(a_interact))) # [B * N, stage_num, C]
+        v_stage = torch.stack(video_stage_list, dim=2)
+        a_stage = torch.stack(audio_stage_list, dim=2)
 
 
-        v_weight      = torch.sigmoid(self.vselectfusion(v_interact)) # [B * N, stage_num, 1]
-        a_weight      = torch.sigmoid(self.aselectfusion(a_interact)) # [B * N, stage_num, 1]
+        v_stage = v_stage.view(-1, v_stage.size(2), v_stage.size(3))
+        a_stage = a_stage.view(-1, a_stage.size(2), a_stage.size(3))
 
-        v_interact    = v_interact.permute(0, 2, 1).contiguous() # [B * N, C, stage_num]
-        a_interact    = a_interact.permute(0, 2, 1).contiguous() # [B * N, C, stage_num]
 
-        v_out         = torch.bmm(v_interact, v_weight).view(-1, N, C)     # [B, N, C]
-        a_out         = torch.bmm(a_interact, a_weight).view(-1, N_a, C_a) # [B, N, C]
+        v_interact    = v_stage + self.drop_path(self.vadaptiveinteraction(self.norm(v_stage)))
+        a_interact    = a_stage + self.drop_path(self.aadaptiveinteraction(self.norm_audio(a_stage)))
 
-        v_out   = v_out + self.drop_path(self.cross_attn(self.cross_norm_1(v_out), context=self.cross_norm_2(x_overall))) # cross-att
-        a_out   = a_out + self.drop_path(self.cross_attn(self.cross_norm_3(a_out), context=self.cross_norm_2(x_overall))) # cross-att
+        v_interact    = v_interact + self.drop_path(self.mlp_att_v(self.norm_att_v(v_interact)))
+        a_interact    = a_interact + self.drop_path(self.mlp_att_a(self.norm_att_a(a_interact)))
 
-        v_out   = v_out + self.drop_path(self.mlp_att_video_IR(self.norm_att_v_IR(v_out))) # FFN # [B, N, C]
-        a_out   = a_out + self.drop_path(self.mlp_att_audio_IR(self.norm_att_a_IR(a_out))) # FFN # [B, N, C]
+
+        v_weight      = torch.sigmoid(self.vselectfusion(v_interact))
+        a_weight      = torch.sigmoid(self.aselectfusion(a_interact))
+
+        v_interact    = v_interact.permute(0, 2, 1).contiguous()
+        a_interact    = a_interact.permute(0, 2, 1).contiguous()
+
+        v_out         = torch.bmm(v_interact, v_weight).view(-1, N, C)
+        a_out         = torch.bmm(a_interact, a_weight).view(-1, N_a, C_a)
+
+
+        v_out   = v_out + self.drop_path(self.cross_attn(self.cross_norm_1(v_out), context=self.cross_norm_2(x_overall)))
+        a_out   = a_out + self.drop_path(self.cross_attn(self.cross_norm_3(a_out), context=self.cross_norm_2(x_overall)))
+
+        v_out   = v_out + self.drop_path(self.mlp_att_video_IR(self.norm_att_v_IR(v_out)))
+        a_out   = a_out + self.drop_path(self.mlp_att_audio_IR(self.norm_att_a_IR(a_out)))
 
         return v_out, a_out, x_overall
 
 
 class PretrainVisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
-    """ 
-    For Audio-Visual Fusion with Iterative Refinement during Pre-Train.
-    """
     def __init__(self, embed_dim=768, embed_dim_audio=768, depth=3,
                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
                  drop_path_rate=0., norm_layer=nn.LayerNorm, init_values=None,
                  modal_param_sharing=False,):
         super().__init__()
 
-        self.modal_param_sharing = modal_param_sharing # NOTE: no use [2024.7.15 21.53]
+        self.modal_param_sharing = modal_param_sharing
 
-        dpr                      = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        dpr                      = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]
 
 
         self.blocks = nn.ModuleList([
@@ -498,15 +504,15 @@ class PretrainVisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
                     init_values=init_values,
                     )
             for i in range(depth)])
-        
-        self.norm       = norm_layer(embed_dim)       # for video
-        self.norm_audio = norm_layer(embed_dim_audio) # for audio
+
+        self.norm       = norm_layer(embed_dim)
+        self.norm_audio = norm_layer(embed_dim_audio)
 
 
         self.Iterative_Refinement_Module = IterativeRefinement(dim=embed_dim, concat_dim=2 * embed_dim)
 
 
-        self.cross_attn       = GeneralAttention(dim=embed_dim, context_dim=embed_dim, num_heads=num_heads, qkv_bias=qkv_bias, 
+        self.cross_attn       = GeneralAttention(dim=embed_dim, context_dim=embed_dim, num_heads=num_heads, qkv_bias=qkv_bias,
                                            qk_scale=qk_scale, attn_drop=attn_drop_rate, proj_drop=drop_rate, attn_head_dim=None)
 
 
@@ -525,11 +531,11 @@ class PretrainVisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
         mlp_hidden_dim        = int(embed_dim * mlp_ratio)
         mlp_hidden_dim_audio  = int(embed_dim_audio * mlp_ratio)
 
-        # video
+
         self.norm_att_v       = norm_layer(embed_dim)
         self.mlp_att_v        = Mlp(in_features=embed_dim, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=drop_rate)
 
-        # audio
+
         self.norm_att_a       = norm_layer(embed_dim_audio)
         self.mlp_att_a        = Mlp(in_features=embed_dim_audio, hidden_features=mlp_hidden_dim_audio, act_layer=nn.GELU, drop=drop_rate)
 
@@ -575,6 +581,7 @@ class PretrainVisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
 
     def forward(self, x, x_audio, x_overall=None):
 
+
         B, N, C       = x.shape
         B_a, N_a, C_a = x_audio.shape
 
@@ -592,30 +599,29 @@ class PretrainVisionTransformerEncoderForFusion_new_no_Mask_IR(nn.Module):
             audio_stage_list.append(x_audio)
 
 
-
-        v_stage = torch.stack(video_stage_list, dim=2) # stage_num * [B, N, C] -> [B, N, stage_num, C]
-        a_stage = torch.stack(audio_stage_list, dim=2) # stage_num * [B, N, C] -> [B, N, stage_num, C]
-
+        v_stage = torch.stack(video_stage_list, dim=2)
+        a_stage = torch.stack(audio_stage_list, dim=2)
 
 
-        v_stage = v_stage.view(-1, v_stage.size(2), v_stage.size(3)) # [B * N, stage_num, C]
-        a_stage = a_stage.view(-1, a_stage.size(2), a_stage.size(3)) # [B * N, stage_num, C]
+        v_stage = v_stage.view(-1, v_stage.size(2), v_stage.size(3))
+        a_stage = a_stage.view(-1, a_stage.size(2), a_stage.size(3))
 
 
-        v_interact    = v_stage + self.drop_path(self.vadaptiveinteraction(self.norm(v_stage)))       # [B * N, stage_num, C]
-        a_interact    = a_stage + self.drop_path(self.aadaptiveinteraction(self.norm_audio(a_stage))) # [B * N, stage_num, C]
+        v_interact    = v_stage + self.drop_path(self.vadaptiveinteraction(self.norm(v_stage)))
+        a_interact    = a_stage + self.drop_path(self.aadaptiveinteraction(self.norm_audio(a_stage)))
 
-        v_interact    = v_interact + self.drop_path(self.mlp_att_v(self.norm_att_v(v_interact)))      # [B * N, stage_num, C]
-        a_interact    = a_interact + self.drop_path(self.mlp_att_a(self.norm_att_a(a_interact)))      # [B * N, stage_num, C]
+        v_interact    = v_interact + self.drop_path(self.mlp_att_v(self.norm_att_v(v_interact)))
+        a_interact    = a_interact + self.drop_path(self.mlp_att_a(self.norm_att_a(a_interact)))
 
-        v_weight      = torch.sigmoid(self.vselectfusion(v_interact)) # [B * N, stage_num, 1]
-        a_weight      = torch.sigmoid(self.aselectfusion(a_interact)) # [B * N, stage_num, 1]
 
-        v_interact    = v_interact.permute(0, 2, 1).contiguous() # [B * N, C, stage_num]
-        a_interact    = a_interact.permute(0, 2, 1).contiguous() # [B * N, C, stage_num]
+        v_weight      = torch.sigmoid(self.vselectfusion(v_interact))
+        a_weight      = torch.sigmoid(self.aselectfusion(a_interact))
 
-        v_out         = torch.bmm(v_interact, v_weight).view(-1, N, C)     # [B, N, C]
-        a_out         = torch.bmm(a_interact, a_weight).view(-1, N_a, C_a) # [B, N, C]
+        v_interact    = v_interact.permute(0, 2, 1).contiguous()
+        a_interact    = a_interact.permute(0, 2, 1).contiguous()
+
+        v_out         = torch.bmm(v_interact, v_weight).view(-1, N, C)
+        a_out         = torch.bmm(a_interact, a_weight).view(-1, N_a, C_a)
 
 
         v_out   = v_out + self.drop_path(self.cross_attn(self.cross_norm_1(v_out), context=self.cross_norm_2(x_overall)))
