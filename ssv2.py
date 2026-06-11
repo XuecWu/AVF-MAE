@@ -6,7 +6,7 @@ from random_erasing import RandomErasing
 import warnings
 from decord import VideoReader, cpu
 from torch.utils.data import Dataset
-import video_transforms as video_transforms 
+import video_transforms as video_transforms
 import volume_transforms as volume_transforms
 
 
@@ -78,11 +78,11 @@ class SSVideoClsDataset(Dataset):
 
     def __getitem__(self, index):
         if self.mode == 'train':
-            args = self.args 
+            args = self.args
             scale_t = 1
 
             sample = self.dataset_samples[index]
-            buffer = self.loadvideo_decord(sample, sample_rate_scale=scale_t) # T H W C
+            buffer = self.loadvideo_decord(sample, sample_rate_scale=scale_t)
             if len(buffer) == 0:
                 while len(buffer) == 0:
                     warnings.warn("video {} not correctly loaded during training".format(sample))
@@ -103,7 +103,7 @@ class SSVideoClsDataset(Dataset):
                 return frame_list, label_list, index_list, {}
             else:
                 buffer = self._aug_frame(buffer, args)
-            
+
             return buffer, self.label_array[index], index, {}
 
         elif self.mode == 'validation':
@@ -135,19 +135,19 @@ class SSVideoClsDataset(Dataset):
             if isinstance(buffer, list):
                 buffer = np.stack(buffer, 0)
 
-            spatial_step = 1.0 * (max(buffer.shape[1], buffer.shape[2]) - self.short_side_size) \
+            spatial_step = 1.0 * (max(buffer.shape[1], buffer.shape[2]) - self.short_side_size)\
                                 / (self.test_num_crop - 1)
-            temporal_start = chunk_nb # 0/1
+            temporal_start = chunk_nb
             spatial_start = int(split_nb * spatial_step)
             if buffer.shape[1] >= buffer.shape[2]:
-                buffer = buffer[temporal_start::2, \
+                buffer = buffer[temporal_start::2,\
                        spatial_start:spatial_start + self.short_side_size, :, :]
             else:
-                buffer = buffer[temporal_start::2, \
+                buffer = buffer[temporal_start::2,\
                        :, spatial_start:spatial_start + self.short_side_size, :]
 
             buffer = self.data_transform(buffer)
-            return buffer, self.test_label_array[index], sample.split("/")[-1].split(".")[0], \
+            return buffer, self.test_label_array[index], sample.split("/")[-1].split(".")[0],\
                    chunk_nb, split_nb
         else:
             raise NameError('mode {} unkown'.format(self.mode))
@@ -171,16 +171,16 @@ class SSVideoClsDataset(Dataset):
         buffer = aug_transform(buffer)
 
         buffer = [transforms.ToTensor()(img) for img in buffer]
-        buffer = torch.stack(buffer) # T C H W
-        buffer = buffer.permute(0, 2, 3, 1) # T H W C 
-        
-        # T H W C 
+        buffer = torch.stack(buffer)
+        buffer = buffer.permute(0, 2, 3, 1)
+
+
         buffer = tensor_normalize(
             buffer, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
         )
-        # T H W C -> C T H W.
+
         buffer = buffer.permute(3, 0, 1, 2)
-        # Perform data augmentation.
+
         scl, asp = (
             [0.08, 1.0],
             [0.75, 1.3333],
@@ -221,7 +221,7 @@ class SSVideoClsDataset(Dataset):
         if not (os.path.exists(fname)):
             return []
 
-        # avoid hanging issue
+
         if os.path.getsize(fname) < 1 * 1024:
             print('SKIP: ', fname, " - ", os.path.getsize(fname))
             return []
@@ -242,12 +242,12 @@ class SSVideoClsDataset(Dataset):
                                [int(tick * x) for x in range(self.num_segment)]))
             while len(all_index) < (self.num_segment * self.test_num_segment):
                 all_index.append(all_index[-1])
-            all_index = list(np.sort(np.array(all_index))) 
+            all_index = list(np.sort(np.array(all_index)))
             vr.seek(0)
             buffer = vr.get_batch(all_index).asnumpy()
             return buffer
 
-        # handle temporal segments
+
         average_duration = len(vr) // self.num_segment
         all_index = []
         if average_duration > 0:
@@ -257,7 +257,7 @@ class SSVideoClsDataset(Dataset):
             all_index += list(np.sort(np.random.randint(len(vr), size=self.num_segment)))
         else:
             all_index += list(np.zeros((self.num_segment,)))
-        all_index = list(np.array(all_index)) 
+        all_index = list(np.array(all_index))
         vr.seek(0)
         buffer = vr.get_batch(all_index).asnumpy()
         return buffer
@@ -333,8 +333,8 @@ def spatial_sampling(
         if random_horizontal_flip:
             frames, _ = video_transforms.horizontal_flip(0.5, frames)
     else:
-        # The testing is deterministic and no jitter should be performed.
-        # min_scale, max_scale, and crop_size are expect to be the same.
+
+
         assert len({min_scale, max_scale, crop_size}) == 1
         frames, _ = video_transforms.random_short_side_scale_jitter(
             frames, min_scale, max_scale

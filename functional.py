@@ -27,7 +27,7 @@ def resize_clip(clip, size, interpolation='bilinear'):
     if isinstance(clip[0], np.ndarray):
         if isinstance(size, numbers.Number):
             im_h, im_w, im_c = clip[0].shape
-            # Min spatial dim already matches minimal size
+
             if (im_w <= im_h and im_w == size) or (im_h <= im_w
                                                    and im_h == size):
                 return clip
@@ -45,7 +45,7 @@ def resize_clip(clip, size, interpolation='bilinear'):
     elif isinstance(clip[0], PIL.Image.Image):
         if isinstance(size, numbers.Number):
             im_w, im_h = clip[0].size
-            # Min spatial dim already matches minimal size
+
             if (im_w <= im_h and im_w == size) or (im_h <= im_w
                                                    and im_h == size):
                 return clip

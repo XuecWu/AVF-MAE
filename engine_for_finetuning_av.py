@@ -1,3 +1,9 @@
+\
+\
+\
+\
+
+
 import os
 import numpy as np
 import math
@@ -28,7 +34,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     model_ema: Optional[ModelEma] = None, mixup_fn: Optional[Mixup] = None, log_writer=None,
                     start_steps=None, lr_schedule_values=None, wd_schedule_values=None,
                     num_training_steps_per_epoch=None, update_freq=None):
-    
+
     model.train(True)
 
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -49,8 +55,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if step >= num_training_steps_per_epoch:
             continue
 
-        it = start_steps + step  # global training iteration
-        # Update LR & WD for the first acc
+        it = start_steps + step
+
         if lr_schedule_values is not None or wd_schedule_values is not None and data_iter_step % update_freq == 0:
             for i, param_group in enumerate(optimizer.param_groups):
                 if lr_schedule_values is not None:
@@ -86,20 +92,20 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             model.step()
 
             if (data_iter_step + 1) % update_freq == 0:
-                # model.zero_grad()
-                # Deepspeed will call step() & model.zero_grad() automatic
+
+
                 if model_ema is not None:
                     model_ema.update(model)
             grad_norm = None
             loss_scale_value = get_loss_scale_for_deepspeed(model)
         else:
-            # this attribute is added by timm on one optimizer (adahessian)
+
             is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
             loss /= update_freq
             grad_norm = loss_scaler(loss, optimizer, clip_grad=max_norm,
                                     parameters=model.parameters(), create_graph=is_second_order,
                                     update_grad=(data_iter_step + 1) % update_freq == 0)
-            
+
             if (data_iter_step + 1) % update_freq == 0:
                 optimizer.zero_grad()
                 if model_ema is not None:
@@ -145,9 +151,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             log_writer.update(grad_norm=grad_norm, head="opt")
             log_writer.set_step()
 
-    # gather the stats from all processes
+
     metric_logger.synchronize_between_processes()
-    
+
     print("Averaged stats:", metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
@@ -159,10 +165,11 @@ def validation_one_epoch(data_loader, model, device):
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Val:'
 
-    # switch to evaluation mode
+
     model.eval()
 
     outputs, targets = [], []
+
 
     for batch in metric_logger.log_every(data_loader, 10, header):
         videos, audios = batch[0]
@@ -171,7 +178,7 @@ def validation_one_epoch(data_loader, model, device):
         audios = audios.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
 
-        # compute output
+
         with torch.cuda.amp.autocast():
             output = model(videos, audios)
             loss = criterion(output, target)
@@ -202,7 +209,7 @@ def validation_one_epoch(data_loader, model, device):
     metric_logger.meters['micro_f1'].update(micro_f1, n=len(preds))
     metric_logger.meters['macro_f1'].update(macro_f1, n=len(preds))
 
-    # gather the stats from all processes
+
     metric_logger.synchronize_between_processes()
     print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'
           .format(top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss))
@@ -220,7 +227,7 @@ def final_test(data_loader, model, device, file, save_feature=False):
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'
 
-    # switch to evaluation mode
+
     model.eval()
     final_result = []
 
@@ -236,9 +243,9 @@ def final_test(data_loader, model, device, file, save_feature=False):
         audios = audios.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
 
-        # compute output
+
         with torch.cuda.amp.autocast():
-            # for saving feature in the last layer
+
             if save_feature:
                 output, saved_feature = model(videos, audios, save_feature=save_feature)
             else:
@@ -246,14 +253,14 @@ def final_test(data_loader, model, device, file, save_feature=False):
             loss = criterion(output, target)
 
         for i in range(output.size(0)):
-            string = "{} {} {} {} {}\n".format(ids[i], \
-                                                str(output.data[i].cpu().numpy().tolist()), \
-                                                str(int(target[i].cpu().numpy())), \
-                                                str(int(chunk_nb[i].cpu().numpy())), \
+            string = "{} {} {} {} {}\n".format(ids[i],\
+                                                str(output.data[i].cpu().numpy().tolist()),\
+                                                str(int(target[i].cpu().numpy())),\
+                                                str(int(chunk_nb[i].cpu().numpy())),\
                                                 str(int(split_nb[i].cpu().numpy())))
             final_result.append(string)
 
-            # for saving feature in the last layer
+
             if save_feature:
                 if ids[i] not in saved_features:
                     saved_features[ids[i]] = {'chunk_id': [], 'split_id': [],
@@ -279,12 +286,12 @@ def final_test(data_loader, model, device, file, save_feature=False):
         for line in final_result:
             f.write(line)
 
-    # for saving feature in the last layer
+
     if save_feature:
         feature_file = file.replace(file[-4:], '_feature.pkl')
         pickle.dump(saved_features, open(feature_file, 'wb'))
 
-    # gather the stats from all processes
+
     metric_logger.synchronize_between_processes()
     print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'
           .format(top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss))
@@ -298,7 +305,7 @@ def merge(eval_path, num_tasks, args, best=False):
     dict_pos = {}
     print("Reading individual output files")
 
-    # for saving feature in the last layer
+
     overall_saved_features = {}
 
     if args.data_set != 'AVCAFFE':
@@ -323,25 +330,25 @@ def merge(eval_path, num_tasks, args, best=False):
                 dict_pos[name].append(chunk_nb + split_nb)
                 dict_label[name] = label
 
-            # for saving feature in the last layer
+
             if args.save_feature:
                 feature_file = file.replace(file[-4:], '_feature.pkl')
                 saved_features = pickle.load(open(feature_file, 'rb'))
                 for sample_id in saved_features.keys():
                     if sample_id not in overall_saved_features:
                         overall_saved_features[sample_id] = {
-                            'chunk_split_id': [], # the only identifier for each view
+                            'chunk_split_id': [],
                             'label': saved_features[sample_id]['label'],
                             'feature': [], 'prob': []}
                     chunk_ids = saved_features[sample_id]['chunk_id']
                     split_ids = saved_features[sample_id]['split_id']
                     for idx, (chunk_id, split_id) in enumerate(zip(chunk_ids, split_ids)):
                         chunk_split_id = f"{chunk_id}_{split_id}"
-                        # avoid repetition
+
                         if chunk_split_id not in overall_saved_features[sample_id]['chunk_split_id']:
                             overall_saved_features[sample_id]['chunk_split_id'].append(chunk_split_id)
                             overall_saved_features[sample_id]['feature'].append(saved_features[sample_id]['feature'][idx])
-                            # NOTE: do softmax, logit -> prob
+
                             overall_saved_features[sample_id]['prob'].append(softmax(saved_features[sample_id]['logit'][idx]))
 
     else:
@@ -360,7 +367,7 @@ def merge(eval_path, num_tasks, args, best=False):
                     dict_pos[name] = []
                 if chunk_nb + split_nb in dict_pos[name]:
                     continue
-                sample_name = '_'.join(os.path.basename(name).split('_')[:3]) # e.g., aiim001_task_1_clip_001
+                sample_name = '_'.join(os.path.basename(name).split('_')[:3])
                 if not sample_name in dict_feats:
                     dict_feats[sample_name] = []
                     dict_pos[sample_name] = []
@@ -388,9 +395,9 @@ def merge(eval_path, num_tasks, args, best=False):
     label = [x[3] for x in ans]
     final_top1 ,final_top5 = np.mean(top1), np.mean(top5)
 
-    # for saving feature in the last layer
+
     if args.save_feature:
-        # get avg feature and pred
+
         for sample_id in overall_saved_features.keys():
             overall_saved_features[sample_id]['feature'] = np.mean(overall_saved_features[sample_id]['feature'], axis=0)
             overall_saved_features[sample_id]['pred'] = int(np.argmax(np.mean(overall_saved_features[sample_id]['prob'], axis=0)))

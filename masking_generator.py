@@ -1,4 +1,11 @@
+\
+\
+\
+\
+
+
 import numpy as np
+
 
 class RandomMaskingGenerator2D:
     def __init__(self, input_size, mask_ratio):
@@ -14,10 +21,10 @@ class RandomMaskingGenerator2D:
 
     def __call__(self):
         mask = np.hstack([
-            np.zeros(self.num_patches - self.num_masks), # 0: for unmasked
-            np.ones(self.num_masks), # 1: for masked
+            np.zeros(self.num_patches - self.num_masks),
+            np.ones(self.num_masks),
         ])
-        np.random.shuffle(mask) # in-place
+        np.random.shuffle(mask)
         return mask
 
 
@@ -25,7 +32,7 @@ class TubeMaskingGenerator:
     def __init__(self, input_size, mask_ratio):
         self.frames, self.height, self.width = input_size
         self.num_patches_per_frame =  self.height * self.width
-        self.total_patches = self.frames * self.num_patches_per_frame 
+        self.total_patches = self.frames * self.num_patches_per_frame
         self.num_masks_per_frame = int(mask_ratio * self.num_patches_per_frame)
         self.total_masks = self.frames * self.num_masks_per_frame
 
@@ -94,16 +101,11 @@ class TubeWindowMaskingGenerator:
                         mask_per_win.extend([mask_per_win_half[i*self.win_size_half[1]:(i+1)*self.win_size_half[1]] + [1] * self.win_size_half[1]])
                     else:
                         mask_per_win.extend([[1] * self.win_size_half[1] + mask_per_win_half[i*self.win_size_half[1]:(i+1)*self.win_size_half[1]]])
-                # if left:
-                #     # mask_per_win = np.hstack([np.array(mask_per_win_half).reshape(self.win_size_half), np.ones(self.win_size_half)])
-                #     mask_per_win = [mask_per_win_half[i*self.win_size_half[1]:(i+1)*self.win_size_half[1]] + [1] * self.win_size_half[1] for i in self.win_size_half[0]]
-                # else:
-                #     # mask_per_win = np.hstack([np.ones(self.win_size_half), np.array(mask_per_win_half).reshape(self.win_size_half)])
-                #     mask_per_win = [[1] * self.win_size_half[1] + mask_per_win_half[i*self.win_size_half[1]:(i+1)*self.win_size_half[1]] for i in self.win_size_half[0]]
-                # mask_per_frame.append(mask_per_win.flatten())
+
+
                 mask_per_frame.extend(mask_per_win)
-            # mask_per_frame = np.hstack(mask_per_frame)
-        else: # local
+
+        else:
             mask_per_frame = []
             for i in range(self.num_wins_per_frame):
                 mask_per_win_half = [0] * self.num_unmasks_per_win + [1] * (self.num_patches_per_win_half - self.num_unmasks_per_win)

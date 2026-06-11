@@ -1,3 +1,9 @@
+\
+\
+\
+\
+
+
 import argparse
 import datetime
 import numpy as np
@@ -23,7 +29,7 @@ def get_args():
     parser.add_argument('--epochs', default=800, type=int)
     parser.add_argument('--save_ckpt_freq', default=50, type=int)
 
-    # Model parameters
+
     parser.add_argument('--model', default='pretrain_hicmae_dim512_patch16_160_a256', type=str, metavar='MODEL',
                         help='Name of model to train')
 
@@ -35,20 +41,19 @@ def get_args():
     parser.add_argument('--mask_ratio', default=0.75, type=float,
                         help='ratio of the visual tokens/patches need be masked')
 
-    parser.add_argument('--input_size', default=160, type=int, help='videos input size for backbone') # 默认为160
+    parser.add_argument('--input_size', default=160, type=int, help='videos input size for backbone')
 
     parser.add_argument('--drop_path', type=float, default=0.0, metavar='PCT',
                         help='Drop path rate (default: 0.1)')
-                        
+
     parser.add_argument('--normlize_target', default=True, type=bool,
                         help='normalized the target patch pixels')
 
-    ## me: for more attention types
+
     parser.add_argument('--encoder_depth', default=None, type=int,
                         help='depth of decoder')
 
 
-    # Optimizer parameters
     parser.add_argument('--opt', default='adamw', type=str, metavar='OPTIMIZER',
                         help='Optimizer (default: "adamw"')
     parser.add_argument('--opt_eps', default=1e-8, type=float, metavar='EPSILON',
@@ -62,7 +67,7 @@ def get_args():
     parser.add_argument('--weight_decay', type=float, default=0.05,
                         help='weight decay (default: 0.05)')
     parser.add_argument('--weight_decay_end', type=float, default=None, help="""Final value of the
-        weight decay. We use a cosine schedule for WD. 
+        weight decay. We use a cosine schedule for WD.
         (Set the same value with args.weight_decay to keep weight decay no change)""")
 
     parser.add_argument('--lr', type=float, default=1.5e-4, metavar='LR',
@@ -77,13 +82,13 @@ def get_args():
     parser.add_argument('--warmup_steps', type=int, default=-1, metavar='N',
                         help='epochs to warmup LR, if scheduler supports')
 
-    # Augmentation parameters
+
     parser.add_argument('--color_jitter', type=float, default=0.0, metavar='PCT',
                         help='Color jitter factor (default: 0.4)')
     parser.add_argument('--train_interpolation', type=str, default='bicubic',
                         help='Training interpolation (random, bilinear, bicubic default: "bicubic")')
 
-    # Dataset parameters
+
     parser.add_argument('--data_path', default='/path/to/list_kinetics-400', type=str,
                         help='dataset path')
     parser.add_argument('--imagenet_default_mean_and_std', default=True, action='store_true')
@@ -101,7 +106,7 @@ def get_args():
     parser.add_argument('--no_auto_resume', action='store_false', dest='auto_resume')
     parser.set_defaults(auto_resume=True)
 
-    # me: for repeated sampling (reduce i/o load)
+
     parser.add_argument('--num_samples', type=int, default=1, help='number of clips sampled from each video')
 
 
@@ -114,7 +119,7 @@ def get_args():
                         help='')
     parser.set_defaults(pin_mem=True)
 
-    # distributed training parameters
+
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
     parser.add_argument('--local_rank', default=-1, type=int)
@@ -123,7 +128,7 @@ def get_args():
 
     parser.add_argument('--no_augmentation', action='store_true', help="do not use GroupMultiScaleCrop during pre-training")
 
-    # audio
+
     parser.add_argument('--encoder_depth_audio', default=None, type=int,
                         help='depth of audio encoder')
     parser.add_argument('--decoder_depth_audio', default=4, type=int,
@@ -136,36 +141,38 @@ def get_args():
                         help='audio input size (default: 256, i.e., 256 ms) for backbone')
     parser.add_argument('--normlize_target_audio', default=True, type=bool,
                         help='normalized the target audio patch pixels (default: True)')
-    
+
     parser.add_argument('--audio_sample_rate', type=int, default=16000)
     parser.add_argument('--num_mel_bins', type=int, default=128)
     parser.add_argument('--roll_mag_aug', type=bool, default=False, help='use roll_mag_aug')
 
-    # fusion
+
     parser.add_argument('--encoder_fusion_depth', default=None, type=int,
                         help='depth of fusion encoder')
-    # hcmcl
+
     parser.add_argument('--inter_contrastive_temperature', default=0.07, type=float,
                         help='temperature for softmax')
     parser.add_argument('--loss_weight', default=0.1, type=float,
                         help='loss weight for hierarchical inter-modal contrastive learning')
-    # intermediate layers
+
     parser.add_argument('--return_intermediate_features', type=int, nargs='+', default=(3, 6, 9),
                         help='skip-connect intermediate features from 4th,7th and 10th encoder layer')
 
-    # for diff target
+
     parser.add_argument('--use_frame_diff_as_target', action='store_true', help="use frame difference as partial recontruction targets")
     parser.add_argument('--frame_diff_group_size', default=2, type=int, help="the group size for diff calculation, for example, "
                         "the target is [f0, f1-f0, f2-f0, f3-f0], [f4, f5-f4, f6-f4, f7-f4], ..., when the size is 4.")
     parser.add_argument('--target_diff_weight', default=None, type=float, help="the weight (0-1) for frame diff target ")
 
+
     parser.add_argument('--attn_type', default='local_global', choices=['joint', 'local_global'], type=str, help='attention type for spatiotemporal modeling')
 
-    parser.add_argument('--lg_region_size', type=int, nargs='+', default=(2,5,10), help='region size (t,h,w) for local_global attention') # for video, (2, 5, 10)
-    parser.add_argument('--lg_region_size_audio', type=int, nargs='+', default=(4,4), help='region size (h,w) for local_global attention') # for audio, (4, 4)
+    parser.add_argument('--lg_region_size', type=int, nargs='+', default=(2,5,10), help='region size (t,h,w) for local_global attention')
+    parser.add_argument('--lg_region_size_audio', type=int, nargs='+', default=(4,4), help='region size (h,w) for local_global attention')
 
     parser.add_argument('--lg_first_attn_type', type=str, default='self', choices=['cross', 'self'], help='the first attention layer type for local_global attention')
     parser.add_argument('--lg_third_attn_type', type=str, default='cross', choices=['cross', 'self'], help='the third attention layer type for local_global attention')
+
 
     parser.add_argument('--lg_attn_param_sharing_first_third', action='store_true', help='share parameters of the first and the third attention layers for local_global attention')
     parser.add_argument('--lg_attn_param_sharing_all', action='store_true', help='share all the parameters of three attention layers for local_global attention')
@@ -173,11 +180,12 @@ def get_args():
     parser.add_argument('--lg_no_second', action='store_true', help='no second (inter-region) attention for local_global attention')
     parser.add_argument('--lg_no_third', action='store_true', help='no third (local-global interaction) attention for local_global attention')
 
+
     parser.add_argument('--decoder_mask_type', default='run_cell', choices=['random', 'run_cell'], type=str, help='decoder masked strategy')
-    parser.add_argument('--decoder_mask_ratio', default=0.5, type=float, help='mask ratio of decoder') # For Video
+    parser.add_argument('--decoder_mask_ratio', default=0.5, type=float, help='mask ratio of decoder')
 
     parser.add_argument('--decoder_mask_type_audio', default='random', choices=['random'], type=str, help='decoder masked strategy')
-    parser.add_argument('--decoder_mask_ratio_audio', default=0.5, type=float, help='mask ratio of decoder') # For Audio
+    parser.add_argument('--decoder_mask_ratio_audio', default=0.5, type=float, help='mask ratio of decoder')
 
     return parser.parse_args()
 
@@ -204,8 +212,15 @@ def get_model(args):
         lg_no_second=args.lg_no_second, lg_no_third=args.lg_no_third,
     )
 
-    print("NOTE: => There is no torch.compile!!") # NOTE: [2024.7.5 22.46]
-    
+
+    '''
+    if version.parse(torch.__version__) > version.parse('1.13.1'):
+        torch.set_float32_matmul_precision('high')
+        model = torch.compile(model)
+    '''
+
+    print("NOTE: => There is no torch.compile!!")
+
     return model
 
 
@@ -216,7 +231,7 @@ def main(args):
 
     device = torch.device(args.device)
 
-    # fix the seed for reproducibility
+
     seed = args.seed + utils.get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -231,27 +246,27 @@ def main(args):
     args.window_size = (args.num_frames // 2, args.input_size // patch_size[0], args.input_size // patch_size[1])
     args.patch_size  = patch_size
 
-    # audio
-    patch_size_audio = model.encoder_audio.patch_embed.patch_size # (16,16)
+
+    patch_size_audio = model.encoder_audio.patch_embed.patch_size
     print("Patch size (audio) = %s" % str(patch_size_audio))
 
     args.window_size_audio = (args.input_size_audio // patch_size_audio[0], args.num_mel_bins // patch_size_audio[1])
     args.patch_size_audio  = patch_size_audio
-    
-    ## from AudioMAE
+
+
     norm_stats = {'audioset': [-4.2677393, 4.5689974], 'esc50': [-6.6268077, 5.358466],
                   'speechcommands': [-6.845978, 5.5654526]}
-    
+
     audio_conf = {
       'num_mel_bins': args.num_mel_bins,
       'target_length': args.input_size_audio,
-      'mean': norm_stats['audioset'][0], # use audioset
+      'mean': norm_stats['audioset'][0],
       'std': norm_stats['audioset'][1],
     }
 
     args.audio_conf = audio_conf
 
-    # get dataset
+
     dataset_train = build_pretraining_dataset(args)
     print(f'The Original Data Scale is : {len(dataset_train)}')
 
@@ -305,7 +320,7 @@ def main(args):
 
     optimizer = create_optimizer(
         args, model_without_ddp)
-    
+
     loss_scaler = NativeScaler()
 
     print("Use step level LR & WD scheduler!")
@@ -319,16 +334,17 @@ def main(args):
 
     wd_schedule_values = utils.cosine_scheduler(
         args.weight_decay, args.weight_decay_end, args.epochs, num_training_steps_per_epoch)
-    
+
     print("Max WD = %.7f, Min WD = %.7f" % (max(wd_schedule_values), min(wd_schedule_values)))
 
     utils.auto_load_model(
         args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
-    
+
     torch.cuda.empty_cache()
 
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()
+
     for epoch in range(args.start_epoch, args.epochs):
 
         if args.distributed:
@@ -381,5 +397,5 @@ if __name__ == '__main__':
 
     if opts.output_dir:
         Path(opts.output_dir).mkdir(parents=True, exist_ok=True)
-        
+
     main(opts)

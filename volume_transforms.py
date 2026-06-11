@@ -28,7 +28,7 @@ class ClipToTensor(object):
         Args: clip (list of numpy.ndarray): clip (list of images)
         to be converted to tensor.
         """
-        # Retrieve shape
+
         if isinstance(clip[0], np.ndarray):
             h, w, ch = clip[0].shape
             assert ch == self.channel_nb, 'Got {0} instead of 3 channels'.format(
@@ -41,7 +41,7 @@ class ClipToTensor(object):
 
         np_clip = np.zeros([self.channel_nb, len(clip), int(h), int(w)])
 
-        # Convert
+
         for img_idx, img in enumerate(clip):
             if isinstance(img, np.ndarray):
                 pass
@@ -67,7 +67,6 @@ class ClipToTensor(object):
             return tensor_clip
 
 
-# Note this norms data to -1/1
 class ClipToTensor_K(object):
     """Convert a list of m (H x W x C) numpy.ndarrays in the range [0, 255]
     to a torch.FloatTensor of shape (C x m x H x W) in the range [0, 1.0]
@@ -83,7 +82,7 @@ class ClipToTensor_K(object):
         Args: clip (list of numpy.ndarray): clip (list of images)
         to be converted to tensor.
         """
-        # Retrieve shape
+
         if isinstance(clip[0], np.ndarray):
             h, w, ch = clip[0].shape
             assert ch == self.channel_nb, 'Got {0} instead of 3 channels'.format(
@@ -96,7 +95,7 @@ class ClipToTensor_K(object):
 
         np_clip = np.zeros([self.channel_nb, len(clip), int(h), int(w)])
 
-        # Convert
+
         for img_idx, img in enumerate(clip):
             if isinstance(img, np.ndarray):
                 pass

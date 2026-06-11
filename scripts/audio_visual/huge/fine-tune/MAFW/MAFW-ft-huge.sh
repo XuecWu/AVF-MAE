@@ -1,16 +1,12 @@
 server=6000
 pretrain_dataset='final-model-huge-903'
-# dataset
 finetune_dataset='MAFW'
 num_labels=11
-# model
 model_dir="pretrain_huge"
 ckpts=(99)
-# input
 input_size=160
 input_size_audio=256
 sr=4
-# parameter
 lr=1e-3
 epochs=100
 
@@ -20,7 +16,6 @@ for split in "${splits[@]}";
 do
   for ckpt in "${ckpts[@]}";
   do
-    # output directory
     OUTPUT_DIR="./saved/model/finetuning-${pretrain_dataset}/${finetune_dataset}/audio_visual/${model_dir}/checkpoint-${ckpt}/eval_split0${split}_lr_${lr}_epoch_${epochs}_size${input_size}_a${input_size_audio}_sr${sr}_server${server}"
     if [ ! -d "$OUTPUT_DIR" ]; then
       mkdir -p $OUTPUT_DIR

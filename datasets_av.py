@@ -1,3 +1,9 @@
+\
+\
+\
+\
+
+
 import os
 from torchvision import transforms
 from transforms import *
@@ -5,13 +11,12 @@ from masking_generator import TubeMaskingGenerator, TubeWindowMaskingGenerator, 
 from kinetics_av import VideoClsDataset, VideoMAE, VideoClsDatasetFrame
 from ssv2 import SSVideoClsDataset
 
-
 class DataAugmentationForVideoMAE(object):
     def __init__(self, args):
-        self.input_mean = [0.485, 0.456, 0.406]  # IMAGENET_DEFAULT_MEAN
-        self.input_std = [0.229, 0.224, 0.225]  # IMAGENET_DEFAULT_STD
+        self.input_mean = [0.485, 0.456, 0.406]
+        self.input_std = [0.229, 0.224, 0.225]
         normalize = GroupNormalize(self.input_mean, self.input_std)
-        # me: new added
+
         if not args.no_augmentation:
             self.train_augmentation = GroupMultiScaleCrop(args.input_size, [1, .875, .75, .66])
         else:
@@ -59,22 +64,23 @@ class MaskGeneratorForAudio(object):
 
     def __repr__(self):
         repr = "(MaskGeneratorForAudio,\n"
-        # repr += "  transform = %s,\n" % str(self.transform)
+
         repr += "  Masked position generator = %s,\n" % str(self.masked_position_generator)
         repr += ")"
         return repr
 
+
 class DataAugmentationForVideoMAEv2(object):
     def __init__(self, args):
-        self.input_mean = [0.485, 0.456, 0.406] # IMAGENET_DEFAULT_MEAN
-        self.input_std  = [0.229, 0.224, 0.225] # IMAGENET_DEFAULT_STD
+        self.input_mean = [0.485, 0.456, 0.406]
+        self.input_std  = [0.229, 0.224, 0.225]
         div             = True
         roll            = False
         normalize       = GroupNormalize(self.input_mean, self.input_std)
 
-        # me: new added
+
         if not args.no_augmentation:
-            self.train_augmentation = GroupMultiScaleCrop(args.input_size, [1, .875, .75, .66]) # We deploy
+            self.train_augmentation = GroupMultiScaleCrop(args.input_size, [1, .875, .75, .66])
         else:
             print(f"==> Note: do not use 'GroupMultiScaleCrop' augmentation during pre-training!!!")
             self.train_augmentation = IdentityTransform()
@@ -86,25 +92,24 @@ class DataAugmentationForVideoMAEv2(object):
             normalize,
         ])
 
-        #----------------------------#
-        # encoder masking
-        #----------------------------#
-        if args.mask_type == 'tube': # by default
+
+        if args.mask_type == 'tube':
             self.encoder_mask_map_generator = TubeMaskingGenerator(args.window_size, args.mask_ratio)
 
-        elif args.mask_type == 'part_window': # no use
+        elif args.mask_type == 'part_window':
             print(f"==> Note: use 'part_window' masking generator (window_size={args.part_win_size[1:]}, apply_symmetry={args.part_apply_symmetry})")
 
             self.encoder_mask_map_generator = TubeWindowMaskingGenerator(
                 args.window_size, args.mask_ratio, win_size=args.part_win_size[1:], apply_symmetry=args.part_apply_symmetry)
-            
+
         else:
             raise NotImplementedError('Unsupported encoder masking strategy type.')
-        
+
+
         if args.decoder_mask_ratio > 0.:
             if args.decoder_mask_type == 'run_cell':
                 self.decoder_mask_map_generator = RunningCellMaskingGenerator(args.window_size, args.decoder_mask_ratio)
-                print('The decoder_mask_map_generator for video is deployed!!!') # NOTE: ok! using!
+                print('The decoder_mask_map_generator for video is deployed!!!')
             else:
                 raise NotImplementedError('Unsupported decoder masking strategy type.')
 
@@ -112,21 +117,23 @@ class DataAugmentationForVideoMAEv2(object):
         process_data, _  = self.transform(images)
         encoder_mask_map = self.encoder_mask_map_generator()
 
+
         if hasattr(self, 'decoder_mask_map_generator'):
-            decoder_mask_map = self.decoder_mask_map_generator() # we deploy
-            # print('decoder_mask_map_generator is ok!!!') # NOTE: ok!!
+            decoder_mask_map = self.decoder_mask_map_generator()
+
         else:
             decoder_mask_map = 1 - encoder_mask_map
 
         return process_data, encoder_mask_map, decoder_mask_map
 
+
     def __repr__(self):
         repr  = "(DataAugmentationForVideoMAEv2,\n"
         repr += "  transform = %s,\n" % str(self.transform)
-        
+
         repr += "  Encoder Masking Generator = %s,\n" % str(
             self.encoder_mask_map_generator)
-        
+
         if hasattr(self, 'decoder_mask_map_generator'):
             repr += "  Decoder Masking Generator = %s,\n" % str(
                 self.decoder_mask_map_generator)
@@ -153,7 +160,7 @@ class MaskGeneratorForAudiov2(object):
                 print('The decoder_mask_map_generator for audio is deployed!!!')
             else:
                 raise NotImplementedError('Unsupported decoder masking strategy type for audio.')
-            
+
     def __call__(self):
         return self.encoder_mask_map_generator(), self.decoder_mask_map_generator()
 
@@ -163,17 +170,17 @@ class MaskGeneratorForAudiov2(object):
         repr += "decoder_mask_map_generator_for_audio = %s,\n" % str(self.decoder_mask_map_generator)
         repr += ")"
         return repr
-    
+
 
 def build_pretraining_dataset(args):
-    transform = DataAugmentationForVideoMAEv2(args) # for video
+    transform = DataAugmentationForVideoMAEv2(args)
 
     mask_generator_audio = MaskGeneratorForAudiov2(
         mask_type=args.mask_type_audio,
         input_size=args.window_size_audio,
         mask_ratio=args.mask_ratio_audio,
-        decoder_mask_ratio=args.decoder_mask_ratio_audio, # new added
-        decoder_mask_type_audio=args.decoder_mask_type_audio, # new added
+        decoder_mask_ratio=args.decoder_mask_ratio_audio,
+        decoder_mask_type_audio=args.decoder_mask_type_audio,
     )
 
     dataset = VideoMAE(
@@ -184,20 +191,20 @@ def build_pretraining_dataset(args):
         modality='rgb',
         new_length=args.num_frames,
         new_step=args.sampling_rate,
-        transform=transform, # for video masking
+        transform=transform,
         temporal_jitter=False,
         video_loader=True,
         use_decord=True,
         lazy_init=False,
-        # me: new added for VoxCeleb2
-        # model=args.model,
+
+
         image_size=args.input_size,
         num_segments=args.num_samples,
-        # me: for audio
+
         audio_conf=args.audio_conf,
         roll_mag_aug=args.roll_mag_aug,
         audio_sample_rate=args.audio_sample_rate,
-        mask_generator_audio=mask_generator_audio, # for audio masking
+        mask_generator_audio=mask_generator_audio,
     )
 
     print("Data Aug = %s" % str(transform))
@@ -215,10 +222,10 @@ def build_dataset(is_train, test_mode, args):
             anno_path = os.path.join(args.data_path, 'train.csv')
         elif test_mode is True:
             mode = 'test'
-            anno_path = os.path.join(args.data_path, 'test.csv') 
-        else:  
+            anno_path = os.path.join(args.data_path, 'test.csv')
+        else:
             mode = 'validation'
-            anno_path = os.path.join(args.data_path, 'val.csv') 
+            anno_path = os.path.join(args.data_path, 'val.csv')
 
         dataset = VideoClsDataset(
             anno_path=anno_path,
@@ -237,7 +244,7 @@ def build_dataset(is_train, test_mode, args):
             new_width=320,
             args=args)
         nb_classes = 400
-    
+
     elif args.data_set == 'SSV2':
         mode = None
         anno_path = None
@@ -246,10 +253,10 @@ def build_dataset(is_train, test_mode, args):
             anno_path = os.path.join(args.data_path, 'train.csv')
         elif test_mode is True:
             mode = 'test'
-            anno_path = os.path.join(args.data_path, 'test.csv') 
-        else:  
+            anno_path = os.path.join(args.data_path, 'test.csv')
+        else:
             mode = 'validation'
-            anno_path = os.path.join(args.data_path, 'val.csv') 
+            anno_path = os.path.join(args.data_path, 'val.csv')
 
         dataset = SSVideoClsDataset(
             anno_path=anno_path,
@@ -276,10 +283,10 @@ def build_dataset(is_train, test_mode, args):
             anno_path = os.path.join(args.data_path, 'train.csv')
         elif test_mode is True:
             mode = 'test'
-            anno_path = os.path.join(args.data_path, 'test.csv') 
-        else:  
+            anno_path = os.path.join(args.data_path, 'test.csv')
+        else:
             mode = 'validation'
-            anno_path = os.path.join(args.data_path, 'val.csv') 
+            anno_path = os.path.join(args.data_path, 'val.csv')
 
         dataset = VideoClsDataset(
             anno_path=anno_path,
@@ -298,7 +305,7 @@ def build_dataset(is_train, test_mode, args):
             new_width=320,
             args=args)
         nb_classes = 101
-    
+
     elif args.data_set == 'HMDB51':
         mode = None
         anno_path = None
@@ -307,10 +314,10 @@ def build_dataset(is_train, test_mode, args):
             anno_path = os.path.join(args.data_path, 'train.csv')
         elif test_mode is True:
             mode = 'test'
-            anno_path = os.path.join(args.data_path, 'test.csv') 
-        else:  
+            anno_path = os.path.join(args.data_path, 'test.csv')
+        else:
             mode = 'validation'
-            anno_path = os.path.join(args.data_path, 'val.csv') 
+            anno_path = os.path.join(args.data_path, 'val.csv')
 
         dataset = VideoClsDataset(
             anno_path=anno_path,
@@ -356,8 +363,8 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256, # me: actually no use
-            new_width=320, # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args)
         nb_classes = 7
 
@@ -388,13 +395,13 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256, # me: actually no use
-            new_width=320, # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args,
-            file_ext='png'
+            file_ext='jpg'
         )
         nb_classes = 11
-        # for using 43 compound expressions
+
         if args.nb_classes == 43:
             nb_classes = args.nb_classes
             print(f"==> NOTE: using 43 compound expressions for MAFW!")
@@ -426,8 +433,8 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256, # me: actually no use
-            new_width=320, # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args)
         nb_classes = 8
 
@@ -458,12 +465,12 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256, # me: actually no use
-            new_width=320, # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args,
         )
         nb_classes = 6
-        # for 4 basic emotions
+
         if args.nb_classes == 4:
             nb_classes = args.nb_classes
             print(f"==> NOTE: only using 4 emotions ('ANG', 'HAP', 'NEU', 'SAD')!")
@@ -495,8 +502,8 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256, # me: actually no use
-            new_width=320, # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args,
             task='regression',
         )
@@ -529,11 +536,11 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256, # me: actually no use
-            new_width=320, # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args,
         )
-        nb_classes = 5 # arousal or valence
+        nb_classes = 5
 
     elif args.data_set == 'MSP-IMPROV':
         mode = None
@@ -561,8 +568,8 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256,  # me: actually no use
-            new_width=320,  # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args,
         )
         nb_classes = 4
@@ -594,8 +601,8 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256,  # me: actually no use
-            new_width=320,  # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args,
         )
         nb_classes = 4
@@ -627,14 +634,14 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256, # me: actually no use
-            new_width=320, # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args,
         )
         nb_classes = 6
 
 
-    elif args.data_set == 'MER24-LABELED': # MER24-LABELED
+    elif args.data_set == 'MER24-LABELED':
         mode      = None
         anno_path = None
 
@@ -645,7 +652,7 @@ def build_dataset(is_train, test_mode, args):
         elif test_mode is True:
             mode = 'test'
             anno_path = os.path.join(args.data_path, 'test.csv')
-            
+
         else:
             mode = 'validation'
             anno_path = os.path.join(args.data_path, 'test.csv')
@@ -663,8 +670,8 @@ def build_dataset(is_train, test_mode, args):
             keep_aspect_ratio=True,
             crop_size=args.input_size,
             short_side_size=args.short_side_size,
-            new_height=256, # me: actually no use
-            new_width=320, # me: actually no use
+            new_height=256,
+            new_width=320,
             args=args,
         )
         nb_classes = 6

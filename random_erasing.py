@@ -11,9 +11,8 @@ import torch
 def _get_pixels(
     per_pixel, rand_color, patch_size, dtype=torch.float32, device="cuda"
 ):
-    # NOTE I've seen CUDA illegal memory access errors being caused by the normal_()
-    # paths, flip the order so normal is run on CPU if this becomes a problem
-    # Issue has been fixed in master https://github.com/pytorch/pytorch/issues/19508
+
+
     if per_pixel:
         return torch.empty(patch_size, dtype=dtype, device=device).normal_()
     elif rand_color:
@@ -70,9 +69,9 @@ class RandomErasing:
         self.per_pixel = False
         self.cube = cube
         if mode == "rand":
-            self.rand_color = True  # per block random normal
+            self.rand_color = True
         elif mode == "pixel":
-            self.per_pixel = True  # per pixel random normal
+            self.per_pixel = True
         else:
             assert not mode or mode == "const"
         self.device = device
@@ -153,7 +152,7 @@ class RandomErasing:
             self._erase(input, *input.size(), input.dtype)
         else:
             batch_size, chan, img_h, img_w = input.size()
-            # skip first slice of batch if num_splits is set (for clean portion of samples)
+
             batch_start = (
                 batch_size // self.num_splits if self.num_splits > 1 else 0
             )

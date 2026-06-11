@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import math
 import numpy as np
 import random
@@ -299,7 +300,7 @@ def grayscale(images):
         img_gray (tensor): blended images, the dimension is
             `num frames` x `channel` x `height` x `width`.
     """
-    # R -> 0.299, G -> 0.587, B -> 0.114.
+
     img_gray = torch.tensor(images)
     gray_channel = (
         0.299 * images[:, 2] + 0.587 * images[:, 1] + 0.114 * images[:, 0]
@@ -418,7 +419,7 @@ def lighting_jitter(images, alphastd, eigval, eigvec):
     """
     if alphastd == 0:
         return images
-    # generate alpha1, alpha2, alpha3.
+
     alpha = np.random.normal(0, alphastd, size=(1, 3))
     eig_vec = np.array(eigvec)
     eig_val = np.reshape(eigval, (1, 3))
@@ -428,19 +429,19 @@ def lighting_jitter(images, alphastd, eigval, eigvec):
     )
     out_images = torch.zeros_like(images)
     if len(images.shape) == 3:
-        # C H W
+
         channel_dim = 0
     elif len(images.shape) == 4:
-        # T C H W
+
         channel_dim = 1
     else:
         raise NotImplementedError(f"Unsupported dimension {len(images.shape)}")
 
     for idx in range(images.shape[channel_dim]):
-        # C H W
+
         if len(images.shape) == 3:
             out_images[idx] = images[idx] + rgb[2 - idx]
-        # T C H W
+
         elif len(images.shape) == 4:
             out_images[:, idx] = images[:, idx] + rgb[2 - idx]
         else:
@@ -483,7 +484,7 @@ def color_normalization(images, mean, stddev):
 
     out_images = torch.zeros_like(images)
     for idx in range(len(mean)):
-        # C H W
+
         if len(images.shape) == 3:
             out_images[idx] = (images[idx] - mean[idx]) / stddev[idx]
         elif len(images.shape) == 4:
@@ -521,7 +522,7 @@ def _get_param_spatial_crop(
             j = random.randint(0, width - w)
             return i, j, h, w
 
-    # Fallback to central crop
+
     in_ratio = float(width) / float(height)
     if in_ratio < min(ratio):
         w = width
@@ -529,7 +530,7 @@ def _get_param_spatial_crop(
     elif in_ratio > max(ratio):
         h = height
         w = int(round(h * max(ratio)))
-    else:  # whole image
+    else:
         w = width
         h = height
     i = (height - h) // 2
@@ -685,9 +686,6 @@ def random_sized_crop_img(
     ).squeeze(0)
 
 
-# The following code are modified based on timm lib, we will replace the following
-# contents with dependency from PyTorchVideo.
-# https://github.com/facebookresearch/pytorchvideo
 class RandomResizedCropAndInterpolation:
     """Crop the given PIL Image to random size and aspect ratio with random interpolation.
     A crop of random size (default: of 0.08 to 1.0) of the original size and a random
@@ -748,7 +746,7 @@ class RandomResizedCropAndInterpolation:
                 j = random.randint(0, img.size[0] - w)
                 return i, j, h, w
 
-        # Fallback to central crop
+
         in_ratio = img.size[0] / img.size[1]
         if in_ratio < min(ratio):
             w = img.size[0]
@@ -756,7 +754,7 @@ class RandomResizedCropAndInterpolation:
         elif in_ratio > max(ratio):
             h = img.size[1]
             w = int(round(h * max(ratio)))
-        else:  # whole image
+        else:
             w = img.size[0]
             h = img.size[1]
         i = (img.size[1] - h) // 2
@@ -825,10 +823,10 @@ def transforms_imagenet_train(
     else:
         img_size = img_size
 
-    scale = tuple(scale or (0.08, 1.0))  # default imagenet scale range
+    scale = tuple(scale or (0.08, 1.0))
     ratio = tuple(
         ratio or (3.0 / 4.0, 4.0 / 3.0)
-    )  # default imagenet ratio range
+    )
     primary_tfl = [
         RandomResizedCropAndInterpolation(
             img_size, scale=scale, ratio=ratio, interpolation=interpolation
@@ -859,13 +857,13 @@ def transforms_imagenet_train(
         else:
             raise NotImplementedError("Auto aug not implemented")
     elif color_jitter is not None:
-        # color jitter is enabled when not using AA
+
         if isinstance(color_jitter, (list, tuple)):
-            # color jitter should be a 3-tuple/list if spec brightness/contrast/saturation
-            # or 4 if also augmenting hue
+
+
             assert len(color_jitter) in (3, 4)
         else:
-            # if it's a scalar, duplicate for brightness, contrast, and saturation, no hue
+
             color_jitter = (float(color_jitter),) * 3
         secondary_tfl += [transforms.ColorJitter(*color_jitter)]
 
@@ -895,8 +893,6 @@ def transforms_imagenet_train(
     else:
         return transforms.Compose(primary_tfl + secondary_tfl + final_tfl)
 
-############################################################################################################
-############################################################################################################
 
 class Compose(object):
     """Composes several transforms
@@ -1226,7 +1222,7 @@ class ColorJitter(object):
             brightness, contrast, saturation, hue = self.get_params(
                 self.brightness, self.contrast, self.saturation, self.hue)
 
-            # Create img transform function sequence
+
             img_transforms = []
             if brightness is not None:
                 img_transforms.append(lambda img: torchvision.transforms.functional.adjust_brightness(img, brightness))
@@ -1238,7 +1234,7 @@ class ColorJitter(object):
                 img_transforms.append(lambda img: torchvision.transforms.functional.adjust_contrast(img, contrast))
             random.shuffle(img_transforms)
 
-            # Apply to all images
+
             jittered_clip = []
             for img in clip:
                 for func in img_transforms:

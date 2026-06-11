@@ -6,27 +6,28 @@ import torchaudio
 import numpy as np
 
 dataset   = "MAFW"
-data_path = os.path.expanduser(f'/home/kh31/wxc/3AI25/AVF-MAE/{dataset}')
+data_path = os.path.expanduser(f'./datasets/{dataset}')
 
 split_dir = os.path.join(data_path, 'Train_Test_Set/single/no_caption')
 video_dir = os.path.join(data_path, 'data/frames')
 
 audio_dir         = os.path.join(data_path, 'data/audio_16k')
-audio_sample_rate = 16000 # expected
+audio_sample_rate = 16000
 audio_file_ext    = 'wav'
 
 num_splits = 5
 splits     = range(1, num_splits + 1)
 
-# check video
+
 total_samples = 10045
 video_dirs    = sorted(glob.glob(os.path.join(video_dir, '*')))
 assert len(video_dirs) == total_samples, f'Error: wrong number of videos, expected {total_samples}, got {len(video_dirs)}.'
 
-# check audio and its sample rate
+
 audio_files  = glob.glob(os.path.join(audio_dir, '*.wav'))
 total_audios = 10024
 assert len(audio_files) == total_audios, f'Error: wrong number of audios, expected {total_audios}, got {len(audio_files)}.'
+
 
 audio_durations = []
 for audio_file in audio_files:
@@ -35,15 +36,18 @@ for audio_file in audio_files:
     audio_durations.append(wav.shape[1] / audio_sample_rate)
 print(f'Audio duration: mean={np.mean(audio_durations):.1f}s, max={max(audio_durations):.1f}s, min={min(audio_durations):.1f}s.')
 
+
 labels    = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise', 'contempt', 'anxiety', 'helplessness', 'disappointment']
 label2idx = {l:idx for idx, l in enumerate(labels)}
 
 
 for split in splits:
 
-    save_dir = f'/home/kh31/wxc/3AI25/AVF-MAE/saved/data/mafw/audio_visual/single/split0{split}'
+
+    save_dir = f'./saved/data/mafw/audio_visual/single/split0{split}'
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+
 
     train_split_file = os.path.join(split_dir, f'set_{split}/train.txt')
     df               = pd.read_csv(train_split_file, header=None, delimiter=' ')
@@ -53,10 +57,11 @@ for split in splits:
     df               = pd.read_csv(test_split_file, header=None, delimiter=' ')
     test_label_dict  = dict(zip(df[0], df[1]))
 
+
     train_label_list = []
     test_label_list  = []
 
-    for v, l in train_label_dict.items(): # example: 00025.mp4 anger
+    for v, l in train_label_dict.items():
         sample_name  = v.split('.')[0]
         video_file   = os.path.join(video_dir, sample_name)
         audio_file   = os.path.join(audio_dir, f"{sample_name}.{audio_file_ext}")
@@ -68,7 +73,7 @@ for split in splits:
         label_idx   = label2idx[l]
         train_label_list.append([video_file, audio_file, label_idx])
 
-    for v, l in test_label_dict.items(): # example: 00025.mp4 anger
+    for v, l in test_label_dict.items():
         sample_name = v.split('.')[0]
         video_file  = os.path.join(video_dir, sample_name)
         audio_file  = os.path.join(audio_dir, f"{sample_name}.{audio_file_ext}")
@@ -79,6 +84,7 @@ for split in splits:
 
         label_idx = label2idx[l]
         test_label_list.append([video_file, audio_file, label_idx])
+
 
     total_samples = len(train_label_list) + len(test_label_list)
     print(f'Total samples in split {split}: {total_samples}, train={len(train_label_list)}, test={len(test_label_list)}')
@@ -91,4 +97,3 @@ for split in splits:
     new_test_split_file  = os.path.join(save_dir, f'test.csv')
     df                   = pd.DataFrame(test_label_list)
     df.to_csv(new_test_split_file, header=None, index=False, sep=' ')
-

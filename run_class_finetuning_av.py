@@ -1,3 +1,9 @@
+\
+\
+\
+\
+
+
 import argparse
 import datetime
 import numpy as np
@@ -22,7 +28,6 @@ from utils import NativeScalerWithGradNormCount as NativeScaler
 from utils import  multiple_samples_collate
 
 
-# https://blog.csdn.net/pumpkin96/article/details/127754736
 np.set_printoptions(threshold=np.inf)
 
 def get_args():
@@ -32,7 +37,7 @@ def get_args():
     parser.add_argument('--update_freq', default=1, type=int)
     parser.add_argument('--save_ckpt_freq', default=100, type=int)
 
-    # Model parameters
+
     parser.add_argument('--model', default='avit_dim512_patch16_160', type=str, metavar='MODEL',
                         help='Name of model to train')
     parser.add_argument('--tubelet_size', type=int, default= 2)
@@ -51,7 +56,7 @@ def get_args():
     parser.add_argument('--model_ema_decay', type=float, default=0.9999, help='')
     parser.add_argument('--model_ema_force_cpu', action='store_true', default=False, help='')
 
-    # Optimizer parameters
+
     parser.add_argument('--opt', default='adamw', type=str, metavar='OPTIMIZER',
                         help='Optimizer (default: "adamw"')
     parser.add_argument('--opt_eps', default=1e-8, type=float, metavar='EPSILON',
@@ -82,7 +87,7 @@ def get_args():
     parser.add_argument('--warmup_steps', type=int, default=-1, metavar='N',
                         help='num of steps to warmup LR, will overload warmup_epochs if set > 0')
 
-    # Augmentation parameters
+
     parser.add_argument('--color_jitter', type=float, default=0.4, metavar='PCT',
                         help='Color jitter factor (default: 0.4)')
     parser.add_argument('--num_sample', type=int, default=2,
@@ -94,13 +99,13 @@ def get_args():
     parser.add_argument('--train_interpolation', type=str, default='bicubic',
                         help='Training interpolation (random, bilinear, bicubic default: "bicubic")')
 
-    # Evaluation parameters
+
     parser.add_argument('--crop_pct', type=float, default=None)
     parser.add_argument('--short_side_size', type=int, default=224)
     parser.add_argument('--test_num_segment', type=int, default=5)
     parser.add_argument('--test_num_crop', type=int, default=3)
-    
-    # Random Erase params
+
+
     parser.add_argument('--reprob', type=float, default=0.25, metavar='PCT',
                         help='Random erase prob (default: 0.25)')
     parser.add_argument('--remode', type=str, default='pixel',
@@ -110,7 +115,7 @@ def get_args():
     parser.add_argument('--resplit', action='store_true', default=False,
                         help='Do not random erase first (clean) augmentation split')
 
-    # Mixup params
+
     parser.add_argument('--mixup', type=float, default=0.8,
                         help='mixup alpha, mixup enabled if > 0.')
     parser.add_argument('--cutmix', type=float, default=1.0,
@@ -124,7 +129,7 @@ def get_args():
     parser.add_argument('--mixup_mode', type=str, default='batch',
                         help='How to apply mixup/cutmix params. Per "batch", "pair", or "elem"')
 
-    # Finetuning params
+
     parser.add_argument('--finetune', default='', help='finetune from checkpoint')
     parser.add_argument('--model_key', default='model|module', type=str)
 
@@ -137,7 +142,7 @@ def get_args():
 
     parser.add_argument('--use_cls', action='store_false', dest='use_mean_pooling')
 
-    # Dataset parameters
+
     parser.add_argument('--data_path', default='/path/to/list_kinetics-400', type=str,
                         help='dataset path')
     parser.add_argument('--eval_data_path', default=None, type=str,
@@ -152,16 +157,16 @@ def get_args():
     parser.add_argument('--data_set', default='Kinetics-400', choices=['Kinetics-400', 'SSV2', 'UCF101', 'HMDB51','image_folder',
                         'DFEW', 'MAFW', 'RAVDESS', 'CREMA-D', 'AVCAFFE', "MER2023", "MSP-IMPROV", "IEMOCAP", "MER24-LABELED"],
                         type=str, help='dataset')
-    
+
     parser.add_argument('--output_dir', default='',
                         help='path where to save, empty for no saving')
-    
+
     parser.add_argument('--log_dir', default=None,
                         help='path where to tensorboard log')
-    
+
     parser.add_argument('--device', default='cuda',
                         help='device to use for training / testing')
-    
+
     parser.add_argument('--seed', default=0, type=int)
 
     parser.add_argument('--resume', default='',
@@ -186,10 +191,10 @@ def get_args():
     parser.add_argument('--no_pin_mem', action='store_false', dest='pin_mem')
     parser.set_defaults(pin_mem=True)
 
-    # distributed training parameters
+
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
-    parser.add_argument('--local_rank', default=-1, type=int) # local_rank -> local-rank
+    parser.add_argument('--local_rank', default=-1, type=int)
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
@@ -206,8 +211,8 @@ def get_args():
     parser.add_argument('--input_size_audio', default=256, type=int,
                         help='audio input size (default: 256, i.e., 256 ms) for backbone')
     parser.add_argument('--num_mel_bins', type=int, default=128)
-    parser.add_argument('--freqm', help='frequency mask max length', type=int, default=0) # pretraining 0
-    parser.add_argument('--timem', help='time mask max length', type=int, default=0) # pretraining 0
+    parser.add_argument('--freqm', help='frequency mask max length', type=int, default=0)
+    parser.add_argument('--timem', help='time mask max length', type=int, default=0)
     parser.add_argument('--roll_mag_aug', action='store_false', help='use roll_mag_aug')
     parser.set_defaults(roll_mag_aug=True)
 
@@ -219,8 +224,8 @@ def get_args():
 
     parser.add_argument('--attn_type', default='local_global', choices=['joint', 'local_global'], type=str, help='attention type for spatiotemporal modeling')
 
-    parser.add_argument('--lg_region_size', type=int, nargs='+', default=(2,5,10), help='region size (t,h,w) for local_global attention') # for video, (2, 5, 10)
-    parser.add_argument('--lg_region_size_audio', type=int, nargs='+', default=(4,4), help='region size (h,w) for local_global attention') # for audio, (4, 4)
+    parser.add_argument('--lg_region_size', type=int, nargs='+', default=(2,5,10), help='region size (t,h,w) for local_global attention')
+    parser.add_argument('--lg_region_size_audio', type=int, nargs='+', default=(4,4), help='region size (h,w) for local_global attention')
 
     parser.add_argument('--lg_first_attn_type', type=str, default='self', choices=['cross', 'self'], help='the first attention layer type for local_global attention')
     parser.add_argument('--lg_third_attn_type', type=str, default='cross', choices=['cross', 'self'], help='the third attention layer type for local_global attention')
@@ -260,18 +265,18 @@ def main(args, ds_init):
 
     device = torch.device(args.device)
 
-    # fix the seed for reproducibility
+
     seed = args.seed + utils.get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
-    # random.seed(seed)
+
 
     cudnn.benchmark = True
 
-    # from AudioMAE
+
     norm_stats = {'audioset': [-4.2677393, 4.5689974], 'k400': [-4.2677393, 4.5689974],
                   'esc50': [-6.6268077, 5.358466], 'speechcommands': [-6.845978, 5.5654526]}
-    
+
     audio_conf_train = {'num_mel_bins': args.num_mel_bins,
                         'target_length': args.input_size_audio,
                         'freqm': args.freqm,
@@ -280,7 +285,7 @@ def main(args, ds_init):
                         'std': norm_stats['audioset'][1],
                         'noise': False,
                         }
-    
+
     audio_conf_val = {'num_mel_bins': args.num_mel_bins,
                       'target_length': args.input_size_audio,
                       'freqm': 0,
@@ -289,10 +294,11 @@ def main(args, ds_init):
                       'std': norm_stats['audioset'][1],
                       'noise': False,
                       }
-    
+
     args.audio_conf = {
         'train': audio_conf_train, 'validation': audio_conf_val, 'test': audio_conf_val
     }
+
 
     dataset_train, args.nb_classes = build_dataset(is_train=True, test_mode=False, args=args)
 
@@ -300,9 +306,9 @@ def main(args, ds_init):
         dataset_val = None
     else:
         dataset_val, _ = build_dataset(is_train=False, test_mode=False, args=args)
-        
+
     dataset_test, _ = build_dataset(is_train=False, test_mode=True, args=args)
-    
+
 
     num_tasks = utils.get_world_size()
     global_rank = utils.get_rank()
@@ -379,6 +385,7 @@ def main(args, ds_init):
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
     print("create model with LGBlock and Dual Masking during Pre-Training!")
+
     model = create_model(
         args.model,
         pretrained=False,
@@ -395,7 +402,7 @@ def main(args, ds_init):
         depth_audio=args.depth_audio,
         fusion_depth=args.fusion_depth,
         use_mean_pooling=args.use_mean_pooling,
-        # me: new added for LGBlock
+
         lg_region_size=args.lg_region_size, lg_region_size_audio=args.lg_region_size_audio, lg_first_attn_type=args.lg_first_attn_type,
         lg_third_attn_type=args.lg_third_attn_type,
         lg_attn_param_sharing_first_third=args.lg_attn_param_sharing_first_third,
@@ -409,13 +416,14 @@ def main(args, ds_init):
         print("Patch size = %s" % str(patch_size))
         args.window_size = (args.num_frames // 2, args.input_size // patch_size[0], args.input_size // patch_size[1])
         args.patch_size  = patch_size
-        
-    # me: audio
+
+
     if model.encoder_audio is not None:
-        patch_size_audio = model.encoder_audio.patch_embed.patch_size  # (16,16)
+        patch_size_audio = model.encoder_audio.patch_embed.patch_size
         print("Patch size (audio) = %s" % str(patch_size_audio))
         args.window_size_audio = (args.input_size_audio // patch_size_audio[0], args.num_mel_bins // patch_size_audio[1])
         args.patch_size_audio  = patch_size_audio
+
 
     if args.finetune:
 
@@ -437,6 +445,15 @@ def main(args, ds_init):
             checkpoint_model = checkpoint
 
 
+        '''
+        new_checkpoint_model = {}
+        for k, v in checkpoint_model.items():
+            new_key = k.replace('_orig_mod.', '')
+            new_checkpoint_model[new_key] = v
+
+        checkpoint_model = new_checkpoint_model
+        '''
+
         state_dict = model.state_dict()
         for k in ['head.weight', 'head.bias']:
             if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
@@ -448,31 +465,31 @@ def main(args, ds_init):
             print('interpolate position embedding for video encoder!!')
 
             pos_embed_checkpoint = checkpoint_model['encoder.pos_embed']
-            embedding_size       = pos_embed_checkpoint.shape[-1] # channel dim
-            num_patches          = model.encoder.patch_embed.num_patches #
-            num_extra_tokens     = model.encoder.pos_embed.shape[-2] - num_patches # 0/1
+            embedding_size       = pos_embed_checkpoint.shape[-1]
+            num_patches          = model.encoder.patch_embed.num_patches
+            num_extra_tokens     = model.encoder.pos_embed.shape[-2] - num_patches
 
-            # height (== width) for the checkpoint position embedding
+
             orig_size = int(((pos_embed_checkpoint.shape[-2] - num_extra_tokens)//(args.num_frames // model.encoder.patch_embed.tubelet_size)) ** 0.5)
-            # height (== width) for the new position embedding
+
             new_size  = int((num_patches // (args.num_frames // model.encoder.patch_embed.tubelet_size) )** 0.5)
 
-            # class_token and dist_token are kept unchanged
+
             if orig_size != new_size:
                 print("Position interpolate from %dx%d to %dx%d" % (orig_size, orig_size, new_size, new_size))
                 extra_tokens = pos_embed_checkpoint[:, :num_extra_tokens]
 
-                # only the position tokens are interpolated
+
                 pos_tokens   = pos_embed_checkpoint[:, num_extra_tokens:]
 
-                # B, L, C -> BT, H, W, C -> BT, C, H, W
+
                 pos_tokens = pos_tokens.reshape(-1, args.num_frames // model.encoder.patch_embed.tubelet_size, orig_size, orig_size, embedding_size)
                 pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
                 pos_tokens = torch.nn.functional.interpolate(pos_tokens, size=(new_size, new_size), mode='bicubic', align_corners=False)
 
-                # BT, C, H, W -> BT, H, W, C ->  B, T, H, W, C
+
                 pos_tokens    = pos_tokens.permute(0, 2, 3, 1).reshape(-1, args.num_frames // model.encoder.patch_embed.tubelet_size, new_size, new_size, embedding_size)
-                pos_tokens    = pos_tokens.flatten(1, 3) # B, L, C
+                pos_tokens    = pos_tokens.flatten(1, 3)
                 new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
 
                 checkpoint_model['encoder.pos_embed'] = new_pos_embed
@@ -486,34 +503,33 @@ def main(args, ds_init):
             num_patches          = model.encoder_audio.patch_embed.num_patches
             num_extra_tokens     = model.encoder_audio.pos_embed.shape[-2] - num_patches
 
-            # height (!= width) for the checkpoint position embedding
-            freq_size            = model.encoder_audio.patch_embed.patch_hw[1] # assert the freq dim is fixed (i.e., 128//16=8)
+
+            freq_size            = model.encoder_audio.patch_embed.patch_hw[1]
             orig_temporal_size   = (pos_embed_checkpoint.shape[-2] - num_extra_tokens) // freq_size
 
-            # height (!= width) for the new position embedding
+
             new_temporal_size    = model.encoder_audio.patch_embed.patch_hw[0]
 
-            # class_token and dist_token are kept unchanged
-            if orig_temporal_size != new_temporal_size: # assert the freq dim is fixed (i.e., 128//16=8)
+
+            if orig_temporal_size != new_temporal_size:
                 print("Position (audio) interpolate from %dx to %dx in the temporal dimension" % (orig_temporal_size, new_temporal_size))
                 extra_tokens = pos_embed_checkpoint[:, :num_extra_tokens]
 
-                # only the position tokens are interpolated
+
                 pos_tokens   = pos_embed_checkpoint[:, num_extra_tokens:]
-                pos_tokens   = pos_tokens.reshape(-1, orig_temporal_size, freq_size, embedding_size) # .permute(0, 3, 1, 2)
+                pos_tokens   = pos_tokens.reshape(-1, orig_temporal_size, freq_size, embedding_size)
 
-                # pos_tokens = pos_tokens.reshape(-1, orig_size, freq_size, embedding_size).permute(0, 3, 1, 2)
-                # pos_tokens = torch.nn.functional.interpolate(pos_tokens, size=(new_size, freq_size), mode='bicubic', align_corners=False)
-                # pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
 
-                pos_tokens    = pos_tokens[:, :new_temporal_size, :, :]  # assume only time diff!!!
+                pos_tokens    = pos_tokens[:, :new_temporal_size, :, :]
                 new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
                 checkpoint_model['encoder_audio.pos_embed'] = new_pos_embed
+
 
         utils.load_state_dict(model, checkpoint_model, prefix=args.model_prefix)
 
 
     model.to(device)
+
 
     model_ema = None
     if args.model_ema:
@@ -573,7 +589,7 @@ def main(args, ds_init):
 
         optimizer = create_optimizer(
             args, model_without_ddp, skip_list=skip_weight_decay_list,
-            get_num_layer=assigner.get_layer_id if assigner is not None else None, 
+            get_num_layer=assigner.get_layer_id if assigner is not None else None,
             get_layer_scale=assigner.get_scale if assigner is not None else None)
         loss_scaler = NativeScaler()
 
@@ -589,7 +605,7 @@ def main(args, ds_init):
     print("Max WD = %.7f, Min WD = %.7f" % (max(wd_schedule_values), min(wd_schedule_values)))
 
     if mixup_fn is not None:
-        # smoothing is handled with mixup label transform
+
         criterion = SoftTargetCrossEntropy()
     elif args.smoothing > 0.:
         criterion = LabelSmoothingCrossEntropy(smoothing=args.smoothing)
@@ -612,7 +628,7 @@ def main(args, ds_init):
             print(f"Accuracy of the network on the {len(dataset_test)} test videos: Top-1: {final_top1:.2f}%, Top-5: {final_top5:.2f}%")
             log_stats = {'Final Top-1': final_top1,
                         'Final Top-5': final_top5}
-            # me: more metrics
+
             from sklearn.metrics import confusion_matrix, f1_score
             preds, labels = pred_dict['pred'], pred_dict['label']
             print(f'Total test samples: {len(preds)}')
@@ -631,7 +647,7 @@ def main(args, ds_init):
             if args.output_dir and utils.is_main_process():
                 with open(os.path.join(args.output_dir, "log.txt"), mode="a", encoding="utf-8") as f:
                     f.write(json.dumps(log_stats) + "\n")
-                    # me: save to log.txt
+
                     f.write(f'Final UAR: {uar:.2%}, Final WAR: {war:.2%}\n')
                     f.write(f'Final Confusion Matrix:\n{conf_mat}\n')
                     f.write(f'Final Class Accuracies: {[f"{i:.2%}" for i in class_acc]}\n')
@@ -642,12 +658,13 @@ def main(args, ds_init):
                 df.to_csv(os.path.join(args.output_dir, 'pred.csv'), index=False)
 
         exit(0)
-        
+
 
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()
     best_metric = -1e8 if args.val_metric not in ['loss'] else 1e8
     best_epoch = None
+
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
@@ -668,7 +685,7 @@ def main(args, ds_init):
         if data_loader_val is not None:
             test_stats = validation_one_epoch(data_loader_val, model, device)
             print(f"Accuracy of the network on the {len(dataset_val)} val videos: {test_stats['acc1']:.1f}%")
-            if (args.val_metric not in ['loss'] and best_metric < test_stats[args.val_metric]) or \
+            if (args.val_metric not in ['loss'] and best_metric < test_stats[args.val_metric]) or\
                 (args.val_metric in ['loss'] and best_metric > test_stats[args.val_metric]):
                 best_metric = test_stats[args.val_metric]
                 best_epoch = epoch
@@ -751,14 +768,14 @@ def main(args, ds_init):
 
         if args.output_dir and utils.is_main_process():
             with open(os.path.join(args.output_dir, "log.txt"), mode="a", encoding="utf-8") as f:
-                # last
+
                 f.write(f"Evaluation on the test set using last epoch model:\n")
                 f.write(json.dumps(log_stats) + "\n")
                 f.write(f'Final UAR: {uar:.2%}, Final WAR: {war:.2%}\n')
                 f.write(f'Final Confusion Matrix:\n{conf_mat}\n')
                 f.write(f'Final Class Accuracies: {[f"{i:.2%}" for i in class_acc]}\n')
                 f.write(f'Final Weighted F1: {weighted_f1:.4f}, Final Micro F1: {micro_f1:.4f}, Final Macro F1: {macro_f1:.4f}\n')
-                # best
+
                 f.write(f"Evaluation on the test set using best epoch model:\n")
                 f.write(json.dumps(log_stats_best) + "\n")
                 f.write(f'Final UAR: {uar_best:.2%}, Final WAR: {war_best:.2%}\n')
@@ -767,10 +784,10 @@ def main(args, ds_init):
                 f.write(f'Final Weighted F1: {weighted_f1_best:.4f}, Final Micro F1: {micro_f1_best:.4f}, Final Macro F1: {macro_f1_best:.4f}\n')
 
             import pandas as pd
-            # last
+
             df = pd.DataFrame(pred_dict)
             df.to_csv(os.path.join(args.output_dir, 'pred.csv'), index=False)
-            # best
+
             df = pd.DataFrame(pred_dict_best)
             df.to_csv(os.path.join(args.output_dir, 'pred_best.csv'), index=False)
 
